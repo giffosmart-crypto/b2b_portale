@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Notifiche{% endblock %}
+{% block page_title %}Notifiche{% endblock %}
+
+{% block content %}
+
+<div class="mb-6 flex items-center justify-between">
+    <p class="text-slate-600 text-sm">
+        Qui trovi tutte le notifiche relative alla tua attività come partner.
+    </p>
+
+    <a href="{% url 'partners:dashboard' %}"
+       class="text-xs text-slate-500 hover:text-slate-800">
+        ← Torna alla dashboard
+    </a>
+</div>
+
+{% if notifications %}
+    <div class="bg-white border border-slate-200 rounded-2xl divide-y divide-slate-100">
+
+        {% for n in notifications %}
+            <div class="p-4 hover:bg-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+
+                <div>
+                    <p class="text-sm font-medium text-slate-900">
+                        {{ n.title }}
+                    </p>
+
+                    <p class="text-xs text-slate-600 mt-1">
+                        {{ n.message }}
+                    </p>
+
+                    <p class="text-xs text-slate-500 mt-2">
+                        {{ n.created_at|date:"d/m/Y H:i" }}
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3 sm:self-start sm:mt-0">
+
+                    {% if n.is_read %}
+                        <span class="inline-flex items-center rounded-full bg-slate-50 text-slate-600 px-2.5 py-0.5 text-xs font-medium">
+                            Letta
+                        </span>
+                    {% else %}
+                        <span class="inline-flex items-center rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-xs font-medium">
+                            Non letta
+                        </span>
+                    {% endif %}
+
+                    {% if n.url %}
+                        <a href="{{ n.url }}"
+                           class="inline-flex items-center rounded-xl border border-slate-300 text-slate-700 px-3 py-1.5 text-xs font-medium hover:bg-slate-50">
+                            Apri
+                        </a>
+                    {% endif %}
+                </div>
+
+            </div>
+        {% endfor %}
+
+    </div>
+
+{% else %}
+    <p class="text-slate-500 text-sm">
+        Non hai ancora notifiche da visualizzare.
+    </p>
+{% endif %}
+
+{% endblock %}

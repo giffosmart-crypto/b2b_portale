@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block title %}Dettaglio ordine #{{ order.id }}{% endblock %}
+{% block page_title %}Ordine #{{ order.id }}{% endblock %}
+
+{% block content %}
+
+<!-- CARD INFO ORDINE -->
+<div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">
+        Dettagli ordine
+    </h2>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+
+        <!-- Struttura -->
+        <div>
+            <p class="text-xs text-slate-500 uppercase">Struttura</p>
+            <p class="font-medium text-slate-900">
+                {{ order.structure.name }} – {{ order.structure.city }}
+            </p>
+        </div>
+
+        <!-- Data -->
+        <div>
+            <p class="text-xs text-slate-500 uppercase">Data ordine</p>
+            <p class="text-slate-700">
+                {{ order.created_at|date:"d/m/Y H:i" }}
+            </p>
+        </div>
+
+        <!-- Stato ordine -->
+        <div>
+            <p class="text-xs text-slate-500 uppercase">Stato ordine</p>
+            <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium
+                {% if order.status == 'pending_payment' %}
+                    bg-yellow-100 text-yellow-800
+                {% elif order.status == 'processing' %}
+                    bg-blue-100 text-blue-800
+                {% elif order.status == 'completed' %}
+                    bg-emerald-100 text-emerald-800
+                {% elif order.status == 'cancelled' %}
+                    bg-rose-100 text-rose-800
+                {% else %}
+                    bg-slate-100 text-slate-700
+                {% endif %}
+            ">
+{% include "partials/order_status_badge.html" with status=order.status label=order.get_status_display %}
+            </span>
+        </div>
+
+        <!-- Totale -->
+        <div>
+            <p class="text-xs text-slate-500 uppercase">Totale</p>
+            <p class="text-xl font-semibold text-slate-900">
+                € {{ order.total }}
+            </p>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ARTICOLI DELL'ORDINE -->
+<div class="bg-white rounded-2xl border border-slate-200 p-6 mb-8">
+
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">Articoli</h2>
+
+    {% if order.items.all %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full text-sm border border-slate-200 rounded-xl">
+                <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Prodotto</th>
+                        <th class="px-3 py-2 text-left">Quantità</th>
+                        <th class="px-3 py-2 text-left">Totale</th>
+                        <th class="px-3 py-2 text-left">Partner</th>
+                        <th class="px-3 py-2 text-left">Stato partner</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for item in order.items.all %}
+                        <tr class="hover:bg-slate-50">
+
+                            <!-- Nome prodotto -->
+                            <td class="px-3 py-2 font-medium text-slate-900">
+                                {{ item.product.name }}
+                            </td>
+
+                            <!-- Quantità -->
+                            <td class="px-3 py-2">
+                                {{ item.quantity }}
+                            </td>
+
+                            <!-- Totale -->
+                            <td class="px-3 py-2 font-medium text-slate-900">
+                                € {{ item.total_price }}
+                            </td>
+
+                            <!-- Partner -->
+                            <td class="px-3 py-2">
+                                {% if item.partner %}
+                                    {{ item.partner }}
+                                {% else %}
+                                    <span class="text-slate-400 italic">–</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Stato partner -->
+                            <td class="px-3 py-2">
+                                <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium
+                                    {% if item.partner_status == 'pending' %}
+                                        bg-slate-100 text-slate-700
+                                    {% elif item.partner_status == 'accepted' %}
+                                        bg-blue-100 text-blue-800
+                                    {% elif item.partner_status == 'in_progress' %}
+                                        bg-yellow-100 text-yellow-800
+                                    {% elif item.partner_status == 'shipped' %}
+                                        bg-indigo-100 text-indigo-800
+                                    {% elif item.partner_status == 'completed' %}
+                                        bg-emerald-100 text-emerald-800
+                                    {% elif item.partner_status == 'rejected' %}
+                                        bg-rose-100 text-rose-800
+                                    {% endif %}
+                                ">
+                                    {{ item.get_partner_status_display }}
+                                </span>
+                            </td>
+
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% else %}
+        <p class="text-slate-500 text-sm">Nessun articolo presente in questo ordine.</p>
+    {% endif %}
+
+</div>
+
+
+<!-- BOTTONI FINALI -->
+<div class="flex items-center gap-4">
+
+    <a href="{% url 'accounts:my_order_duplicate' order.id %}"
+       class="inline-flex items-center rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+        Duplica ordine
+    </a>
+
+    <a href="{% url 'accounts:my_orders' %}"
+       class="text-slate-600 hover:text-slate-900 text-sm">
+        ← Torna ai tuoi ordini
+    </a>
+
+</div>
+
+{% endblock %}

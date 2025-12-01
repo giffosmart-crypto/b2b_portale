@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Catalogo prodotti{% endblock %}
+{% block page_title %}Catalogo prodotti{% endblock %}
+
+{% block content %}
+
+{# HEADER + RIASSUNTO RISULTATI #}
+<div class="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div>
+        <h2 class="text-lg font-semibold text-slate-900">
+            Catalogo prodotti e servizi
+        </h2>
+        <p class="text-sm text-slate-500">
+            Sfoglia kit biancheria, servizi e soluzioni per la tua struttura ricettiva.
+        </p>
+    </div>
+
+    {% if page_obj %}
+        <div class="text-sm text-slate-500 md:text-right">
+            <p>
+                Trovati
+                <span class="font-semibold text-slate-900">{{ page_obj.paginator.count }}</span>
+                risultati
+            </p>
+            {% if current_filters.q %}
+                <p class="text-xs mt-0.5">
+                    Ricerca: <span class="font-medium">"{{ current_filters.q }}"</span>
+                </p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+{# FILTRI #}
+<form method="get" class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm">
+
+    <div class="flex items-center justify-between mb-4 gap-2">
+        <h3 class="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            Filtri catalogo
+        </h3>
+        <a href="{% url 'catalog:product_list' %}"
+           class="text-xs text-slate-500 hover:text-slate-700">
+            Reset filtri
+        </a>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        {# Ricerca #}
+        <div class="sm:col-span-2 lg:col-span-2">
+            <label class="block text-xs font-medium text-slate-500 mb-1">
+                Ricerca libera
+            </label>
+            <input type="text" name="q"
+                   value="{{ current_filters.q }}"
+                   placeholder="Nome, descrizione, categoria, partner..."
+                   class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-slate-50
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
+        </div>
+
+        {# Categoria #}
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Categoria</label>
+            <select name="category"
+                    class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Tutte le categorie</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.slug }}" {% if current_filters.category == cat.slug %}selected{% endif %}>
+                        {{ cat.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# Partner #}
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Partner</label>
+            <select name="partner"
+                    class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Tutti i partner</option>
+                {% for p in partners %}
+                    <option value="{{ p.id }}"
+                        {% if current_filters.partner|stringformat:"s" == p.id|stringformat:"s" %}selected{% endif %}>
+                        {{ p.company_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# Tipo #}
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Tipo</label>
+            <select name="is_service"
+                    class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="" {% if not current_filters.is_service %}selected{% endif %}>Prodotti e servizi</option>
+                <option value="1" {% if current_filters.is_service == "1" %}selected{% endif %}>Solo servizi</option>
+                <option value="0" {% if current_filters.is_service == "0" %}selected{% endif %}>Solo prodotti</option>
+            </select>
+        </div>
+
+        {# Prezzo minimo #}
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Prezzo minimo (€)</label>
+            <input type="number" step="0.01" name="min_price" value="{{ current_filters.min_price }}"
+                   class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-slate-50
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
+        </div>
+
+        {# Prezzo massimo #}
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Prezzo massimo (€)</label>
+            <input type="number" step="0.01" name="max_price" value="{{ current_filters.max_price }}"
+                   class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-slate-50
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white">
+        </div>
+
+        {# Ordina per #}
+        <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Ordina per</label>
+            <select name="ordering"
+                    class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="" {% if not current_filters.ordering %}selected{% endif %}>Nome (A → Z)</option>
+                <option value="price_asc" {% if current_filters.ordering == "price_asc" %}selected{% endif %}>Prezzo crescente</option>
+                <option value="price_desc" {% if current_filters.ordering == "price_desc" %}selected{% endif %}>Prezzo decrescente</option>
+                <option value="recent" {% if current_filters.ordering == "recent" %}selected{% endif %}>Più recenti</option>
+            </select>
+        </div>
+
+    </div>
+
+    {# Bottoni #}
+    <div class="flex flex-wrap items-center gap-3 mt-4">
+        <button type="submit"
+                class="inline-flex items-center gap-1 rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+            <span>🔎</span>
+            <span>Applica filtri</span>
+        </button>
+
+        <a href="{% url 'catalog:product_list' %}"
+           class="text-sm text-slate-500 hover:text-slate-700">
+            Rimuovi tutti i filtri
+        </a>
+    </div>
+
+</form>
+
+{# GRIGLIA PRODOTTI #}
+{% if page_obj.object_list %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+    {% for product in page_obj.object_list %}
+        <article class="bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col overflow-hidden hover:border-blue-200 hover:shadow-md transition">
+            {# Immagine #}
+            {% if product.main_image %}
+                <div class="aspect-[3/2] overflow-hidden bg-slate-100">
+                    <img src="{{ product.main_image.url }}"
+                         alt="{{ product.name }}"
+                         class="w-full h-full object-cover">
+                </div>
+            {% endif %}
+
+            <div class="p-4 flex flex-col flex-1">
+                {# Badge tipo + categoria #}
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-1">
+                        {% if product.is_service %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-800">
+                                Servizio
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-800">
+                                Prodotto / Kit
+                            </span>
+                        {% endif %}
+
+                        {% if product.category %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
+                                {{ product.category.name }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# Titolo #}
+                <h3 class="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">
+                    <a href="{% url 'catalog:product_detail' product.slug %}"
+                       class="hover:text-blue-600">
+                        {{ product.name }}
+                    </a>
+                </h3>
+
+                {# Partner #}
+                {% if product.supplier %}
+                    <p class="text-xs text-slate-500 mb-1">
+                        Partner: <span class="font-medium">{{ product.supplier.company_name }}</span>
+                    </p>
+                {% endif %}
+
+                {# Descrizione corta #}
+                {% if product.short_description %}
+                    <p class="text-sm text-slate-600 mb-3 line-clamp-3">
+                        {{ product.short_description }}
+                    </p>
+                {% endif %}
+
+                {# Prezzo #}
+                <div class="mt-auto mb-3">
+                    <p class="text-xs text-slate-500">Prezzo base</p>
+                    <p class="text-lg font-semibold text-slate-900">
+                        € {{ product.base_price }}
+                    </p>
+                    <p class="text-xs text-slate-400">
+                        {{ product.get_unit_display }}
+                    </p>
+                </div>
+
+                {# Azioni #}
+                <div class="flex items-center gap-2 mt-auto">
+                    <a href="{% url 'catalog:product_detail' product.slug %}"
+                       class="flex-1 text-center rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                        Dettagli
+                    </a>
+
+                    <form action="{% url 'orders:cart_add' product.id %}"
+                          method="post"
+                          class="flex-1">
+                        {% csrf_token %}
+                        <button type="submit"
+                                class="w-full text-center rounded-xl bg-blue-600 text-white px-3 py-2 text-xs font-medium hover:bg-blue-700">
+                            Aggiungi al carrello
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </article>
+    {% endfor %}
+
+</div>
+
+{# PAGINAZIONE #}
+<div class="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between text-sm text-slate-600">
+
+    <span>
+        Pagina <strong>{{ page_obj.number }}</strong> di {{ page_obj.paginator.num_pages }}
+    </span>
+
+    {% with f=current_filters %}
+        <div class="flex flex-wrap items-center gap-2">
+            {% if page_obj.has_previous %}
+                <a href="?page=1&q={{ f.q }}&category={{ f.category }}&partner={{ f.partner }}&min_price={{ f.min_price }}&max_price={{ f.max_price }}&is_service={{ f.is_service }}&ordering={{ f.ordering }}"
+                   class="px-3 py-1 rounded-full border border-slate-200 hover:bg-slate-50">
+                    « Prima
+                </a>
+                <a href="?page={{ page_obj.previous_page_number }}&q={{ f.q }}&category={{ f.category }}&partner={{ f.partner }}&min_price={{ f.min_price }}&max_price={{ f.max_price }}&is_service={{ f.is_service }}&ordering={{ f.ordering }}"
+                   class="px-3 py-1 rounded-full border border-slate-200 hover:bg-slate-50">
+                    ‹ Precedente
+                </a>
+            {% endif %}
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&q={{ f.q }}&category={{ f.category }}&partner={{ f.partner }}&min_price={{ f.min_price }}&max_price={{ f.max_price }}&is_service={{ f.is_service }}&ordering={{ f.ordering }}"
+                   class="px-3 py-1 rounded-full border border-slate-200 hover:bg-slate-50">
+                    Successiva ›
+                </a>
+                <a href="?page={{ page_obj.paginator.num_pages }}&q={{ f.q }}&category={{ f.category }}&partner={{ f.partner }}&min_price={{ f.min_price }}&max_price={{ f.max_price }}&is_service={{ f.is_service }}&ordering={{ f.ordering }}"
+                   class="px-3 py-1 rounded-full border border-slate-200 hover:bg-slate-50">
+                    Ultima »
+                </a>
+            {% endif %}
+        </div>
+    {% endwith %}
+</div>
+
+{% else %}
+    <div class="text-center py-12">
+        <p class="text-slate-500 text-sm mb-2">
+            Nessun prodotto trovato con i filtri selezionati.
+        </p>
+        <a href="{% url 'catalog:product_list' %}"
+           class="inline-flex items-center gap-1 rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+            🔄 Reimposta filtri
+        </a>
+    </div>
+{% endif %}
+
+{% endblock %}

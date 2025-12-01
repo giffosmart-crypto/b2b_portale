@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard partner{% endblock %}
+{% block page_title %}Dashboard partner{% endblock %}
+
+{% block content %}
+
+<!-- Intro -->
+<div class="mb-6">
+    <p class="text-slate-600 text-sm">
+        Ciao
+        <strong class="text-slate-900">{{ request.user.first_name|default:request.user.username }}</strong>,
+        ecco il riepilogo delle tue attività.
+    </p>
+</div>
+
+<!-- AREA NOTIFICHE -->
+{% if unread_notifications_count > 0 %}
+<div class="mb-6 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4">
+    🔔 Hai <strong>{{ unread_notifications_count }}</strong> notifiche non lette.
+    <a href="{% url 'partners:notifications' %}" class="underline font-medium">Vedi tutte</a>
+</div>
+{% endif %}
+
+<!-- KPI CARDS -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+
+    {% include "partials/kpi_card.html" with title="In attesa" value=kpi.pending color="amber" %}
+    {% include "partials/kpi_card.html" with title="Accettati" value=kpi.accepted color="blue" %}
+    {% include "partials/kpi_card.html" with title="In lavorazione" value=kpi.in_progress color="cyan" %}
+    {% include "partials/kpi_card.html" with title="Spediti" value=kpi.shipped color="indigo" %}
+    {% include "partials/kpi_card.html" with title="Completati" value=kpi.completed color="emerald" %}
+    {% include "partials/kpi_card.html" with title="Rifiutati" value=kpi.rejected color="rose" %}
+</div>
+
+<!-- Ricavi del mese -->
+<div class="mb-10">
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900 mb-2">Ricavi del mese</h2>
+        <p class="text-3xl font-bold text-emerald-600">
+            {{ revenue_month|floatformat:2 }} €
+        </p>
+    </div>
+</div>
+
+<!-- Prodotti più venduti -->
+<div class="mb-10">
+    <h2 class="text-lg font-semibold text-slate-900 mb-3">Prodotti più venduti</h2>
+
+    {% if top_products %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-slate-200 rounded-xl text-sm">
+                <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Prodotto</th>
+                        <th class="px-3 py-2 text-left">Quantità</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for p in top_products %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="px-3 py-2 font-medium text-slate-900">{{ p.product__name }}</td>
+                            <td class="px-3 py-2">{{ p.qty }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-slate-500 text-sm">Nessun dato disponibile.</p>
+    {% endif %}
+</div>
+
+
+<!-- ULTIMI ORDINI -->
+<h2 class="text-lg font-semibold text-slate-900 mb-3">Ultimi ordini</h2>
+
+{% if recent_orders %}
+    <div class="overflow-x-auto mb-10">
+        <table class="min-w-full bg-white border border-slate-200 rounded-xl text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">ID ordine</th>
+                    <th class="px-3 py-2 text-left">Struttura</th>
+                    <th class="px-3 py-2 text-left">Cliente</th>
+                    <th class="px-3 py-2 text-left">Data</th>
+                    <th class="px-3 py-2 text-left">Stato</th>
+                    <th class="px-3 py-2 text-left">Dettaglio</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for order in recent_orders %}
+                    <tr class="hover:bg-slate-50">
+
+                        <td class="px-3 py-2 font-medium text-slate-900">#{{ order.id }}</td>
+
+                        <td class="px-3 py-2">
+                            {{ order.structure }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {{ order.client }}
+                        </td>
+
+                        <td class="px-3 py-2 text-slate-500">
+                            {{ order.created_at|date:"d/m/Y H:i" }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {% include "partials/order_status_badge.html" with status=order.status label=order.get_status_display %}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            <a href="{% url 'partners:order_detail' order.id %}"
+                               class="text-blue-600 hover:text-blue-800 font-medium">
+                                Vedi
+                            </a>
+                        </td>
+
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+{% else %}
+    <p class="text-slate-500 mb-10 text-sm">Nessun ordine recente.</p>
+{% endif %}
+
+
+<!-- ULTIME RIGHE -->
+<h2 class="text-lg font-semibold text-slate-900 mb-3">Ultime righe assegnate</h2>
+
+{% if latest_items %}
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-slate-200 rounded-xl text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">ID ordine</th>
+                    <th class="px-3 py-2 text-left">Prodotto</th>
+                    <th class="px-3 py-2 text-left">Struttura</th>
+                    <th class="px-3 py-2 text-left">Quantità</th>
+                    <th class="px-3 py-2 text-left">Stato partner</th>
+                    <th class="px-3 py-2 text-left">Azioni</th>
+                </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+                {% for item in latest_items %}
+                    <tr class="hover:bg-slate-50">
+
+                        <td class="px-3 py-2 font-medium text-slate-900">#{{ item.order.id }}</td>
+
+                        <td class="px-3 py-2">
+                            {{ item.product }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {{ item.order.structure }}
+                        </td>
+
+                        <td class="px-3 py-2 font-medium text-slate-900">
+                            {{ item.quantity }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {% include "partials/partner_status_badge.html" with status=item.partner_status label=item.get_partner_status_display %}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            <a href="{% url 'partners:order_detail' item.order.id %}"
+                               class="text-blue-600 hover:text-blue-800 font-medium">
+                                Dettaglio ordine
+                            </a>
+                        </td>
+
+                    </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+{% else %}
+    <p class="text-slate-500 text-sm">Non ci sono righe assegnate recentemente.</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }}{% endblock %}
+{% block page_title %}{{ product.name }}{% endblock %}
+
+{% block content %}
+
+<div class="space-y-8">
+
+    <!-- HEADER + LAYOUT PRINCIPALE -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+
+        <!-- IMMAGINE PRINCIPALE -->
+        <div>
+            {% if product.main_image %}
+                <div class="aspect-[4/3] rounded-2xl overflow-hidden bg-slate-100 mb-3">
+                    <img src="{{ product.main_image.url }}"
+                         alt="{{ product.name }}"
+                         class="w-full h-full object-cover">
+                </div>
+            {% else %}
+                <div class="aspect-[4/3] rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 text-sm">
+                    Nessuna immagine disponibile
+                </div>
+            {% endif %}
+
+            <div class="mt-3">
+                <a href="{% url 'catalog:product_availability' product.slug %}"
+                   class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800">
+                    Vedi disponibilità
+                </a>
+            </div>
+        </div>
+
+        <!-- INFO PRODOTTO -->
+        <div class="space-y-4">
+
+            <!-- Categoria + Partner -->
+            <div class="space-y-1">
+                <p class="text-xs font-medium text-slate-500 uppercase">
+                    {{ product.category.name }}
+                </p>
+
+                {% if product.supplier %}
+                    <p class="text-xs text-slate-500">
+                        Partner:
+                        <span class="font-medium text-slate-800">
+                            {{ product.supplier.company_name }}
+                        </span>
+                    </p>
+                {% endif %}
+            </div>
+
+            <!-- Titolo e tipo -->
+            <div class="flex flex-wrap items-center gap-2">
+                <h1 class="text-xl md:text-2xl font-semibold text-slate-900">
+                    {{ product.name }}
+                </h1>
+
+                {% if product.is_service %}
+                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-700">
+                        Servizio
+                    </span>
+                {% else %}
+                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                        Prodotto fisico
+                    </span>
+                {% endif %}
+            </div>
+
+            <!-- Prezzo -->
+            <div class="space-y-1">
+                <p class="text-xs text-slate-500 uppercase">Prezzo</p>
+                <p class="text-2xl font-semibold text-slate-900">
+                    € {{ product.base_price }}
+                </p>
+                <p class="text-xs text-slate-500">
+                    {{ product.get_unit_display }}
+                </p>
+            </div>
+
+            <!-- Descrizione breve / lunga -->
+            {% if product.description %}
+                <div class="prose prose-sm max-w-none text-slate-700">
+                    {{ product.description|linebreaks }}
+                </div>
+            {% endif %}
+
+            <!-- CTA -->
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+
+                <a href="{% url 'orders:cart_add' product.id %}"
+                   class="inline-flex items-center rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+                    Aggiungi al carrello
+                </a>
+
+                <a href="{% url 'catalog:product_availability' product.slug %}"
+                   class="text-sm text-blue-600 hover:text-blue-800">
+                    Vedi disponibilità
+                </a>
+
+                <a href="{% url 'catalog:product_list' %}"
+                   class="text-sm text-slate-500 hover:text-slate-700">
+                    Torna al catalogo
+                </a>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- COMPONENTI DEL KIT -->
+    {% if product.components.all %}
+        {% if product.components.all|length > 0 %}
+            <section class="border-t border-slate-100 pt-6">
+                <h2 class="text-sm font-semibold text-slate-900 mb-3">
+                    Componenti del kit
+                </h2>
+                <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-700">
+                    {% for comp in product.components.all %}
+                        <li class="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2">
+                            <span>{{ comp.name }}</span>
+                            <span class="text-xs text-slate-500">x {{ comp.quantity }}</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+    {% endif %}
+
+    <!-- GALLERY IMMAGINI -->
+    {% if product.images.all %}
+        {% if product.images.all|length > 0 %}
+            <section class="border-t border-slate-100 pt-6">
+                <h2 class="text-sm font-semibold text-slate-900 mb-3">
+                    Altre immagini
+                </h2>
+                <div class="flex flex-wrap gap-3">
+                    {% for img in product.images.all %}
+                        <div class="w-32 h-24 rounded-xl overflow-hidden bg-slate-100">
+                            <img src="{{ img.image.url }}"
+                                 alt="{{ img.alt_text }}"
+                                 class="w-full h-full object-cover">
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    {% endif %}
+
+</div>
+
+{% endblock %}

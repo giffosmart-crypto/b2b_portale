@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Carrello{% endblock %}
+{% block page_title %}Carrello{% endblock %}
+
+{% block content %}
+
+{% if cart|length == 0 %}
+
+    <div class="text-center py-10">
+        <p class="text-slate-500 text-sm mb-6">Il carrello è vuoto.</p>
+
+        <a href="{% url 'catalog:product_list' %}"
+           class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Torna al catalogo
+        </a>
+    </div>
+
+{% else %}
+
+    <!-- Carrello -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-6">
+
+        <h2 class="text-lg font-semibold text-slate-900 mb-4">
+            Articoli nel carrello
+        </h2>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full border border-slate-200 rounded-xl text-sm">
+                <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Prodotto</th>
+                        <th class="px-3 py-2 text-left">Quantità</th>
+                        <th class="px-3 py-2 text-left">Prezzo unitario</th>
+                        <th class="px-3 py-2 text-left">Totale</th>
+                        <th class="px-3 py-2 text-left"></th>
+                    </tr>
+                </thead>
+
+                <tbody class="divide-y divide-slate-100">
+
+                    {% for item in cart %}
+                        <tr class="hover:bg-slate-50">
+
+                            <!-- Nome prodotto -->
+                            <td class="px-3 py-2 font-medium text-slate-900">
+                                {{ item.product.name }}
+                            </td>
+
+                            <!-- Quantità -->
+                            <td class="px-3 py-2">
+                                {{ item.quantity }}
+                            </td>
+
+                            <!-- Prezzo unitario -->
+                            <td class="px-3 py-2">
+                                € {{ item.price }}
+                            </td>
+
+                            <!-- Totale -->
+                            <td class="px-3 py-2 font-medium text-slate-900">
+                                € {{ item.total_price }}
+                            </td>
+
+                            <!-- Rimuovi -->
+                            <td class="px-3 py-2">
+                                <a href="{% url 'orders:cart_remove' item.product.id %}"
+                                   class="text-rose-600 hover:text-rose-800 font-medium text-sm">
+                                    Rimuovi
+                                </a>
+                            </td>
+
+                        </tr>
+                    {% endfor %}
+
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totale -->
+        <div class="flex justify-end mt-6">
+            <div class="text-right">
+                <p class="text-sm text-slate-500 uppercase">Totale carrello</p>
+                <p class="text-2xl font-semibold text-slate-900">
+                    € {{ cart.get_total_price }}
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- CTA -->
+    <div class="flex items-center justify-end gap-4">
+
+        <a href="{% url 'catalog:product_list' %}"
+           class="text-slate-600 hover:text-slate-900 text-sm">
+            ← Continua gli acquisti
+        </a>
+
+        <a href="{% url 'orders:checkout' %}"
+           class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Vai al checkout →
+        </a>
+
+    </div>
+
+{% endif %}
+
+{% endblock %}

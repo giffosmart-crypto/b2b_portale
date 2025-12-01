@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Portale B2B turistico{% endblock %}
+{% block page_title %}Home{% endblock %}
+
+{% block content %}
+
+<div class="space-y-10">
+
+    {# HERO #}
+    <section class="flex flex-col lg:flex-row items-start lg:items-center gap-8">
+        <div class="flex-1">
+            <p class="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-xs font-medium text-blue-700 mb-3">
+                Marketplace B2B per il turismo
+            </p>
+            <h2 class="text-2xl md:text-3xl font-semibold text-slate-900 mb-3">
+                Un unico portale per gestire <span class="text-blue-600">kit biancheria</span>,
+                <span class="text-blue-600">servizi</span> e fornitori della tua struttura.
+            </h2>
+            <p class="text-sm md:text-base text-slate-600 mb-5">
+                Hotel, B&amp;B, case vacanza e partner di servizio si incontrano in un’unica piattaforma:
+                ordini centralizzati, fornitori certificati, processi più semplici per tutti.
+            </p>
+
+<div class="flex flex-wrap gap-3">
+
+    {% if request.user.is_authenticated %}
+        {# Utente loggato: mostra SOLO "Sfoglia il catalogo" #}
+        <a href="{% url 'catalog:product_list' %}"
+           class="inline-flex items-center justify-center gap-1 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            🛍 Sfoglia il catalogo
+        </a>
+
+    {% else %}
+        {# Utente non loggato: mostra ACCEDI + REGISTRATI #}
+        <a href="{% url 'accounts:login' %}"
+           class="inline-flex items-center justify-center gap-1 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            🔑 Accedi
+        </a>
+
+        <a href="/register/"
+           class="inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            📝 Registrati
+        </a>
+    {% endif %}
+
+</div>
+        </div>
+
+        <div class="flex-1">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-xs font-semibold text-slate-500 mb-1 uppercase">Per le strutture</p>
+                    <p class="text-sm text-slate-700">
+                        Ordini kit e servizi da più fornitori in un unico posto, con prezzi chiari e tracciamento.
+                    </p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-xs font-semibold text-slate-500 mb-1 uppercase">Per i partner</p>
+                    <p class="text-sm text-slate-700">
+                        Ricevi richieste qualificate, organizzi le consegne e tieni sotto controllo gli ordini.
+                    </p>
+                </div>
+                <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 col-span-2">
+                    <p class="text-xs font-semibold text-slate-500 mb-1 uppercase">Per l’amministratore</p>
+                    <p class="text-sm text-slate-700">
+                        Controllo centrale su listini, contratti, condizioni commerciali e reportistica di tutte
+                        le strutture e dei partner.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {# COME FUNZIONA #}
+    <section>
+        <h3 class="text-base md:text-lg font-semibold text-slate-900 mb-3">
+            Come funziona il portale
+        </h3>
+        <p class="text-sm text-slate-600 mb-5">
+            Il modello è pensato per tre attori principali: struttura cliente, partner fornitore e amministratore
+            del portale.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-xs font-semibold text-blue-600 mb-1 uppercase">Cliente</p>
+                <h4 class="text-sm font-semibold text-slate-900 mb-1">Hotel / B&amp;B / Case Vacanza</h4>
+                <p class="text-sm text-slate-600">
+                    Naviga il catalogo, seleziona kit e servizi, effettua ordini e monitora le consegne
+                    in modo centralizzato.
+                </p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-xs font-semibold text-emerald-600 mb-1 uppercase">Partner</p>
+                <h4 class="text-sm font-semibold text-slate-900 mb-1">Fornitori di prodotti e servizi</h4>
+                <p class="text-sm text-slate-600">
+                    Pubblicano la propria offerta, ricevono ordini dal portale e gestiscono evasione e logistica.
+                </p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <p class="text-xs font-semibold text-slate-600 mb-1 uppercase">Amministratore</p>
+                <h4 class="text-sm font-semibold text-slate-900 mb-1">Gestione centrale</h4>
+                <p class="text-sm text-slate-600">
+                    Definisce i listini, abilita partner e clienti, controlla condizioni, report e qualità del servizio.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {# CATEGORIE / PRODOTTI IN EVIDENZA #}
+    <section>
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-base md:text-lg font-semibold text-slate-900">
+                Categorie e prodotti in evidenza
+            </h3>
+            <a href="{% url 'catalog:product_list' %}"
+               class="text-xs text-blue-600 hover:text-blue-700">
+                Vai al catalogo completo →
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {% if categories %}
+                {% for cat in categories %}
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p class="text-xs font-semibold text-slate-500 mb-1 uppercase">Categoria</p>
+                        <h4 class="text-sm font-semibold text-slate-900 mb-1">
+                            {{ cat.name }}
+                        </h4>
+                        <p class="text-xs text-slate-500 mb-3">
+                            Prodotti e servizi collegati a questa categoria nel catalogo.
+                        </p>
+                        <a href="{% url 'catalog:product_list' %}?category={{ cat.slug }}"
+                           class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700">
+                            Vedi prodotti →
+                        </a>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-sm text-slate-500">
+                    Le categorie non sono ancora configurate. Aggiungile dal pannello di amministrazione.
+                </p>
+            {% endif %}
+        </div>
+
+        {% if featured_products %}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {% for product in featured_products %}
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col">
+                        <p class="text-xs font-semibold text-slate-500 mb-1 uppercase">
+                            {{ product.category.name|default:"Prodotto" }}
+                        </p>
+                        <h4 class="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">
+                            <a href="{% url 'catalog:product_detail' product.slug %}"
+                               class="hover:text-blue-600">
+                                {{ product.name }}
+                            </a>
+                        </h4>
+                        {% if product.supplier %}
+                            <p class="text-xs text-slate-500 mb-1">
+                                Partner: <span class="font-medium">{{ product.supplier.company_name }}</span>
+                            </p>
+                        {% endif %}
+                        <p class="mt-auto text-sm font-semibold text-slate-900">
+                            € {{ product.base_price }} <span class="text-xs font-normal text-slate-500">{{ product.get_unit_display }}</span>
+                        </p>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+
+    {# VANTAGGI #}
+    <section>
+        <h3 class="text-base md:text-lg font-semibold text-slate-900 mb-3">
+            Perché usare il portale B2B
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-700">
+            <div class="flex gap-2">
+                <span>✅</span>
+                <p>Un unico catalogo per più strutture e partner, con condizioni centralizzate.</p>
+            </div>
+            <div class="flex gap-2">
+                <span>✅</span>
+                <p>Ordini tracciati, riduzione degli errori e tempi più brevi per la gestione operativa.</p>
+            </div>
+            <div class="flex gap-2">
+                <span>✅</span>
+                <p>Partner qualificati, controllati dall’amministrazione centrale del portale.</p>
+            </div>
+            <div class="flex gap-2">
+                <span>✅</span>
+                <p>Base solida per reportistica, analisi dei volumi e ottimizzazione dei costi.</p>
+            </div>
+        </div>
+    </section>
+
+
+</div>
+
+{% endblock %}

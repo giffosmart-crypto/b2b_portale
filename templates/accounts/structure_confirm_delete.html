@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Elimina struttura{% endblock %}
+
+{% block content %}
+<h1>Elimina struttura</h1>
+
+<p>Sei sicuro di voler eliminare la struttura <strong>{{ structure.name }}</strong> ({{ structure.city }})?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Sì, elimina</button>
+    <a href="{% url 'accounts:my_structures_list' %}">Annulla</a>
+</form>
+{% endblock %}

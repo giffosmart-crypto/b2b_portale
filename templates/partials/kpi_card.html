@@ -1,0 +1,31 @@
+{% comment %}
+Usage:
+{% include "partials/kpi_card.html" with title="Ordini totali" value=total_orders color="blue" %}
+Available colors: blue, emerald, rose, yellow, slate, amber, cyan, indigo
+{% endcomment %}
+
+<div class="bg-white border border-slate-200 rounded-2xl p-4">
+    <p class="text-xs text-slate-500 uppercase">{{ title }}</p>
+
+    <p class="text-2xl font-semibold
+        {% if color == 'blue' %}
+            text-blue-600
+        {% elif color == 'emerald' %}
+            text-emerald-600
+        {% elif color == 'rose' %}
+            text-rose-600
+        {% elif color == 'yellow' %}
+            text-yellow-600
+        {% elif color == 'amber' %}
+            text-amber-600
+        {% elif color == 'cyan' %}
+            text-cyan-600
+        {% elif color == 'indigo' %}
+            text-indigo-600
+        {% else %}
+            text-slate-900
+        {% endif %}
+    ">
+        {{ value }}
+    </p>
+</div>

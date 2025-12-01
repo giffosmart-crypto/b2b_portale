@@ -1,0 +1,119 @@
+{% extends "backoffice/base_admin.html" %}
+
+{% block page_title %}Lista Ordini{% endblock %}
+
+{% block admin_content %}
+
+<h1 class="mb-4">Ordini</h1>
+
+<!-- FILTRI -->
+<div class="card mb-4">
+  <div class="card-header">
+    <strong>Filtri</strong>
+  </div>
+  <div class="card-body">
+
+    <form method="get" class="row gy-2 gx-3 align-items-end">
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Stato ordine</label>
+        <select name="status" class="form-select">
+          <option value="">Tutti</option>
+          {% for value, label in orders.first.STATUS_CHOICES %}
+            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Cliente (email)</label>
+        <input type="text" name="client" class="form-control" placeholder="email..." value="{{ client_email }}">
+      </div>
+
+      <div class="col-12 col-md-3">
+        <label class="form-label">Partner</label>
+        <select name="partner" class="form-select">
+          <option value="">Tutti</option>
+          {% for p in partners %}
+            <option value="{{ p.id }}" {% if selected_partner == p.id %}selected{% endif %}>
+              {{ p.company_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-6 col-md-3">
+        <label class="form-label">Da data</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
+      </div>
+
+      <div class="col-6 col-md-3">
+        <label class="form-label">A data</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
+      </div>
+
+      <div class="col-12 mt-2">
+        <button class="btn btn-primary" type="submit">Filtra</button>
+        <a href="" class="btn btn-secondary">Reset</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+
+<!-- LISTA ORDINI -->
+<div class="card">
+  <div class="card-header bg-primary text-white">
+    <strong>Risultati</strong>
+  </div>
+
+  <div class="card-body p-0">
+    <table class="table table-striped table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Cliente</th>
+          <th>Struttura</th>
+          <th>Totale (€)</th>
+          <th>Stato</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+
+        {% for order in orders %}
+        <tr>
+          <td>#{{ order.id }}</td>
+          <td>{{ order.client.email }}</td>
+          <td>
+  {% if order.structure %}
+    {{ order.structure.name }}
+  {% else %}
+    -
+  {% endif %}
+</td>
+          <td>{{ order.total }}</td>
+          <td>{{ order.status }}</td>
+          <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
+          <td>
+            <a href="{% url 'backoffice:order_detail' order.id %}" class="btn btn-sm btn-primary">
+              Dettaglio
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center">Nessun ordine trovato.</td>
+        </tr>
+        {% endfor %}
+
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
