@@ -1,6 +1,8 @@
 from decimal import Decimal
 from django.db import models
 from django.utils.text import slugify
+from django.conf import settings
+from django.db.models import Avg
 
 
 class Category(models.Model):
@@ -70,6 +72,15 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    @property
+    def average_rating(self):
+        """
+        Rating medio del prodotto calcolato SOLO sulle recensioni approvate.
+        """
+        qs = self.ratings.filter(is_approved=True)
+        result = qs.aggregate(avg=Avg("rating"))["avg"]
+        return result or 0
 
     class Meta:
         verbose_name = "Prodotto/Servizio"
@@ -100,6 +111,89 @@ class Product(models.Model):
             self.slug = slug
 
         super().save(*args, **kwargs)
+        
+        
+class ProductRating(models.Model):
+    # Stati di moderazione
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+
+    MODERATION_STATUS_CHOICES = [
+        (STATUS_PENDING, "In attesa"),
+        (STATUS_APPROVED, "Approvata"),
+        (STATUS_REJECTED, "Rifiutata"),
+    ]
+
+    product = models.ForeignKey(
+        "catalog.Product",
+        on_delete=models.CASCADE,
+        related_name="ratings",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="product_ratings",
+    )
+    rating = models.PositiveSmallIntegerField()  # 1–5
+    comment = models.TextField(max_length=2000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Flag storico ancora usato nel resto del codice (average_rating, ecc.)
+    # D'ora in poi viene tenuto allineato allo stato di moderazione.
+    is_approved = models.BooleanField(
+        default=False,
+        help_text="True se la recensione è approvata e visibile.",
+    )
+
+    # Nuovo stato di moderazione a 3 livelli
+    moderation_status = models.CharField(
+        max_length=20,
+        choices=MODERATION_STATUS_CHOICES,
+        default=STATUS_PENDING,
+        db_index=True,
+        help_text="Stato della moderazione: in attesa / approvata / rifiutata.",
+    )
+    
+    # Audit moderazione
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="moderated_ratings",
+        help_text="Utente staff che ha effettuato l'ultima moderazione.",
+    )
+    moderated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Data/ora dell'ultima moderazione.",
+    )
+
+    class Meta:
+        unique_together = ("product", "user")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.product} - {self.user} ({self.rating})"
+
+    # --- Helper comodi per admin e template ---
+
+    @property
+    def is_pending(self) -> bool:
+        return self.moderation_status == self.STATUS_PENDING
+
+    @property
+    def is_rejected(self) -> bool:
+        return self.moderation_status == self.STATUS_REJECTED
+
+    @property
+    def status_label(self) -> str:
+        """
+        Etichetta leggibile per lo stato (per template/admin).
+        """
+        mapping = dict(self.MODERATION_STATUS_CHOICES)
+        return mapping.get(self.moderation_status, "")
 
 
 class ProductImage(models.Model):

@@ -1,6 +1,7 @@
 from decimal import Decimal
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Order(models.Model):
@@ -359,8 +360,9 @@ class PartnerPayout(models.Model):
     period_start = models.DateField("Periodo da")
     period_end = models.DateField("Periodo a")
 
+    # 🔹 IMPORTO DA LIQUIDARE AL PARTNER
     total_commission = models.DecimalField(
-        "Totale commissioni",
+        "Totale da liquidare al partner",
         max_digits=10,
         decimal_places=2,
         default=Decimal("0.00"),
@@ -376,6 +378,15 @@ class PartnerPayout(models.Model):
     notes = models.TextField(
         "Note interne",
         blank=True,
+    )
+
+    # 🔹 NUOVO CAMPO: ricevuta pagamento
+    payment_receipt = models.FileField(
+        "Ricevuta di pagamento",
+        upload_to="payout_receipts/",
+        blank=True,
+        null=True,
+        help_text="Allega la ricevuta del bonifico o documento contabile.",
     )
 
     created_at = models.DateTimeField("Creato il", auto_now_add=True)
@@ -398,7 +409,7 @@ class PartnerPayout(models.Model):
         Marca come liquidate tutte le OrderItem del partner
         nel periodo di questo payout.
         """
-        from .models import OrderItem  # import locale per evitare import circolari
+        from .models import OrderItem  # lasciamo il tuo import locale
 
         items = OrderItem.objects.filter(
             partner=self.partner,
@@ -414,17 +425,27 @@ class PartnerPayout(models.Model):
 
     def save(self, *args, **kwargs):
         """
-        Se lo stato passa a PAID, liquida le righe di commissione
-        del periodo per questo partner.
+        Se lo stato passa a PAID:
+        - imposta automaticamente paid_at (se non valorizzato)
+        - liquida le righe di commissione del periodo per questo partner
         """
-        previous = None
+        previous_status = None
         if self.pk:
-            previous = PartnerPayout.objects.filter(pk=self.pk).first()
+            previous_status = (
+                PartnerPayout.objects
+                .filter(pk=self.pk)
+                .values_list("status", flat=True)
+                .first()
+            )
+
+        # se da admin imposti direttamente "Pagato" e non c'è paid_at, lo settiamo ora
+        if self.status == self.STATUS_PAID and self.paid_at is None:
+            self.paid_at = timezone.now()
 
         super().save(*args, **kwargs)
 
-        # Se prima non era pagato e ora è pagato → liquida le righe
-        if previous and previous.status != self.STATUS_PAID and self.status == self.STATUS_PAID:
+        # Se prima NON era pagato e ora è pagato → liquida le righe una sola volta
+        if previous_status != self.STATUS_PAID and self.status == self.STATUS_PAID:
             self.liquidate_items()
             
             

@@ -21,11 +21,11 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 
-from accounts.decorators import admin_required
+from accounts.decorators import admin_required, content_staff_required
 from orders.models import Order, OrderItem, PartnerPayout
 from partners.models import PartnerProfile
 from accounts.models import User, ClientStructure
-from catalog.models import Product, Category, KitComponent
+from catalog.models import Product, Category, KitComponent,ProductRating
 from cms.models import Page
 
 class NumberedCanvas(canvas.Canvas):
@@ -418,6 +418,138 @@ def cms_page_list(request):
 # LISTA UTENTI COMPLETA
 # -------------------------------
 from accounts.models import User  # se non già importato
+
+# -------------------------------
+# RECENSIONI PRODOTTI (BACKOFFICE)
+# -------------------------------
+@content_staff_required
+def review_list(request):
+    """
+    Lista recensioni con filtri base per:
+    - prodotto
+    - partner
+    - utente
+    - rating
+    - stato approvazione
+    """
+    reviews = ProductRating.objects.select_related(
+        "product",
+        "product__supplier",
+        "user"
+    ).all()
+
+    product_id = request.GET.get("product")
+    partner_id = request.GET.get("partner")
+    user_email = request.GET.get("user")
+    rating = request.GET.get("rating")
+    status = request.GET.get("status")
+
+    if product_id:
+        reviews = reviews.filter(product_id=product_id)
+
+    if partner_id:
+        reviews = reviews.filter(product__supplier_id=partner_id)
+
+    if user_email:
+        reviews = reviews.filter(user__email__icontains=user_email)
+
+    if rating:
+        reviews = reviews.filter(rating=rating)
+
+    if status == "approved":
+        reviews = reviews.filter(is_approved=True)
+    elif status == "pending":
+        reviews = reviews.filter(is_approved=False)
+
+    reviews = reviews.order_by("-created_at")
+
+    products = Product.objects.order_by("name")
+    partners = PartnerProfile.objects.order_by("company_name")
+
+    context = {
+        "reviews": reviews,
+        "products": products,
+        "partners": partners,
+        "product_id": int(product_id) if product_id else None,
+        "partner_id": int(partner_id) if partner_id else None,
+        "user_email": user_email or "",
+        "rating": rating or "",
+        "status": status or "",
+    }
+    return render(request, "backoffice/review_list.html", context)
+
+
+@content_staff_required
+def review_detail(request, review_id):
+    """
+    Dettaglio singola recensione, solo lettura + pulsanti moderazione.
+    """
+    review = get_object_or_404(
+        ProductRating.objects.select_related("product", "product__supplier", "user"),
+        id=review_id,
+    )
+    return render(request, "backoffice/review_detail.html", {"review": review})
+
+
+@content_staff_required
+def review_moderate(request, review_id):
+    """
+    Azione di moderazione (approva / rifiuta) dal backoffice.
+    """
+    review = get_object_or_404(ProductRating, id=review_id)
+
+    action = request.POST.get("action")
+    if action == "approve":
+        review.is_approved = True
+    elif action == "reject":
+        review.is_approved = False
+
+    # campi audit se li hai aggiunti nello STEP 2
+    if hasattr(review, "moderated_by"):
+        review.moderated_by = request.user
+    if hasattr(review, "moderated_at"):
+        from django.utils import timezone
+        review.moderated_at = timezone.now()
+
+    review.save()
+
+    return HttpResponseRedirect(reverse("backoffice:review_list"))
+
+
+@admin_required
+def review_approve(request, pk):
+    """
+    Imposta la recensione come approvata e registra chi/ quando.
+    """
+    review = get_object_or_404(ProductRating, pk=pk)
+    review.moderation_status = ProductRating.STATUS_APPROVED
+    review.is_approved = True
+    review.moderated_by = request.user
+    review.moderated_at = timezone.now()
+    review.save(update_fields=["moderation_status", "is_approved", "moderated_by", "moderated_at"])
+    messages.success(
+        request,
+        f"Recensione #{review.id} per '{review.product}' approvata.",
+    )
+    return HttpResponseRedirect(reverse("backoffice:review_list"))
+
+
+@admin_required
+def review_reject(request, pk):
+    """
+    Imposta la recensione come rifiutata e registra chi/ quando.
+    """
+    review = get_object_or_404(ProductRating, pk=pk)
+    review.moderation_status = ProductRating.STATUS_REJECTED
+    review.is_approved = False
+    review.moderated_by = request.user
+    review.moderated_at = timezone.now()
+    review.save(update_fields=["moderation_status", "is_approved", "moderated_by", "moderated_at"])
+    messages.warning(
+        request,
+        f"Recensione #{review.id} per '{review.product}' segnata come RIFIUTATA.",
+    )
+    return HttpResponseRedirect(reverse("backoffice:review_list"))
 
 @admin_required
 def user_list(request):

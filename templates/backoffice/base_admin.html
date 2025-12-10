@@ -227,6 +227,20 @@
                     <span>Pagine CMS</span>
                 </a>
 
+                {# RECENSIONI PRODOTTI #}
+                <a href="{% url 'backoffice:review_list' %}"
+                   class="admin-nav-item {% if request.resolver_match.url_name == 'review_list' or request.resolver_match.url_name == 'review_detail' %}active{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                         class="admin-nav-icon"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 17.75L6.5 21l1.05-6.13L3 9.75l6.25-.91L12 3l2.75 5.84 6.25.91-4.55 5.12L17.5 21z"/>
+                        <path d="M8.5 10.5h7" />
+                        <path d="M9.5 13.5h5" />
+                    </svg>
+                    <span>Recensioni prodotti</span>
+                </a>
+
                 {# UTENTI #}
                 <a href="{% url 'backoffice:user_list' %}"
                    class="admin-nav-item {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">

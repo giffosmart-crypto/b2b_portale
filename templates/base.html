@@ -285,9 +285,12 @@
                         </a>
 
                         <a href="{% url 'orders:cart_detail' %}"
-                           class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
-                            <span>🧺 Carrello</span>
-                        </a>
+   class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
+    <span>🧺 Carrello</span>
+    {% if cart_item_count %}
+        <span class="badge-pill">{{ cart_item_count }}</span>
+    {% endif %}
+</a>
                     {% endif %}
                 {% endif %}
 
@@ -425,8 +428,12 @@
                         </a>
 
                         <a href="{% url 'orders:cart_detail' %}"
-                           class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
-                            <span>🧺 Carrello</span>
+   class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
+    <span>🧺 Carrello</span>
+    {% if cart_item_count %}
+        <span class="badge-pill">{{ cart_item_count }}</span>
+    {% endif %}
+</a>
                         </a>
                     {% endif %}
                 {% endif %}
@@ -571,10 +578,15 @@
 
                         <!-- Carrello in topbar SOLO per non-partner e NON nel backoffice -->
                         <a href="{% url 'orders:cart_detail' %}"
-                           class="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900">
-                            <span>🧺</span>
-                            <span class="hidden sm:inline">Carrello</span>
-                        </a>
+   class="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900">
+    <span>🧺</span>
+    <span class="hidden sm:inline">Carrello</span>
+    {% if cart_item_count %}
+        <span class="hidden md:inline text-xs text-slate-500">
+            ({{ cart_item_count }} – € {{ cart_total }})
+        </span>
+    {% endif %}
+</a>
                     {% endif %}
                 {% endif %}
 

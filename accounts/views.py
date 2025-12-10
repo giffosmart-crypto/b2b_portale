@@ -12,8 +12,9 @@ from .forms import (
     ClientProfileForm,
     AdminProfileForm,
 )
-from orders.models import Order, OrderItem
-
+from orders.models import Order, OrderItem, OrderMessage
+from django.urls import reverse
+from partners.models import PartnerProfile, PartnerNotification
 
 def _ensure_client(user):
     """
@@ -95,10 +96,20 @@ def my_orders_list(request):
 
     # Numeri per i 4 box
     total_orders = orders_qs.count()
-    completed_orders = orders_qs.filter(status=Order.STATUS_PAID).count()
-    open_orders = orders_qs.exclude(
-        status__in=[Order.STATUS_PAID, Order.STATUS_CANCELLED]
-    ).count()
+
+    # Stati considerati "in corso" (ordine ancora vivo)
+    open_statuses = [
+        Order.STATUS_PENDING_PAYMENT,
+        Order.STATUS_PAID,
+        Order.STATUS_PROCESSING,
+        Order.STATUS_SHIPPED,
+    ]
+    open_orders = orders_qs.filter(status__in=open_statuses).count()
+
+    # Completati = realmente conclusi
+    completed_orders = orders_qs.filter(status=Order.STATUS_COMPLETED).count()
+
+    # Annullati
     cancelled_orders = orders_qs.filter(status=Order.STATUS_CANCELLED).count()
 
     # Ultimi 3 ordini (per la sezione "Ultimi ordini")
@@ -114,15 +125,81 @@ def my_orders_list(request):
     }
     return render(request, "accounts/my_orders_list.html", context)
 
-
 @login_required
 def my_order_detail(request, order_id):
+    """
+    Dettaglio ordine lato cliente:
+    - mostra righe ordine
+    - mostra cronologia messaggi
+    - permette al cliente di inviare un nuovo messaggio
+    - invia una notifica al partner quando il cliente scrive
+    """
     if not _ensure_client(request.user):
         return HttpResponseForbidden("Area riservata ai clienti.")
 
     order = get_object_or_404(Order, id=order_id, client=request.user)
-    return render(request, "accounts/my_order_detail.html", {"order": order})
 
+    # --- Invio messaggio (POST) ---
+    if request.method == "POST":
+        text = (request.POST.get("message") or "").strip()
+
+        if text:
+            msg = OrderMessage.objects.create(
+                order=order,
+                sender=request.user,
+                sender_role=OrderMessage.ROLE_CLIENT,
+                message=text,
+            )
+            print("DEBUG: Messaggio creato con ID", msg.id)
+
+            # Trova tutti i partner coinvolti nelle righe dell'ordine
+            partners = (
+                PartnerProfile.objects.filter(order_items__order=order)
+                .distinct()
+            )
+
+            for partner in partners:
+                # prova a costruire un link al dettaglio ordine partner
+                try:
+                    url = reverse("partners:order_detail", args=[order.id])
+                except Exception:
+                    # se la route non esiste ancora, lasciamo il link vuoto
+                    url = ""
+
+                PartnerNotification.objects.create(
+                    partner=partner,
+                    title=f"Nuovo messaggio sull'ordine #{order.id}",
+                    message=text[:1000],
+                    url=url,
+                )
+
+            messages.success(request, "Il tuo messaggio è stato inviato al partner.")
+        else:
+            messages.error(request, "Il messaggio non può essere vuoto.")
+
+        return redirect("accounts:my_order_detail", order_id=order.id)
+
+    # --- GET normale (mostra pagina) ---
+
+    # segna come letti per il CLIENTE tutti i messaggi non ancora letti
+    OrderMessage.objects.filter(order=order, is_read_by_client=False).update(
+        is_read_by_client=True
+    )
+
+    items = order.items.select_related("product", "partner").all()
+    order_messages = order.messages.all().order_by("created_at")
+
+    return render(
+        request,
+        "accounts/my_order_detail.html",
+        {
+            "order": order,
+            "items": items,
+            "order_messages": order_messages,
+        },
+    )
+   
+    
 
 @login_required
 def my_order_duplicate(request, order_id):

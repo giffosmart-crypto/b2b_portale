@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from catalog.models import Product
 from partners.models import PartnerProfile
@@ -30,12 +31,52 @@ def cart_add(request, product_id):
     return redirect("orders:cart_detail")
 
 
+@require_POST
+@login_required
+def cart_update(request, product_id):
+    """
+    Aggiorna la quantità di un prodotto nel carrello.
+    Se quantity <= 0 rimuove il prodotto.
+    """
+    product = get_object_or_404(Product, id=product_id, is_active=True)
+    cart = Cart(request)
+
+    try:
+        quantity = int(request.POST.get("quantity", 1))
+    except (TypeError, ValueError):
+        quantity = 1
+
+    if quantity <= 0:
+        cart.remove(product)
+        messages.info(request, f"{product.name} è stato rimosso dal carrello.")
+    else:
+        cart.add(product=product, quantity=quantity, override_quantity=True)
+        messages.success(
+            request,
+            f"La quantità di {product.name} è stata aggiornata a {quantity}.",
+        )
+
+    return redirect("orders:cart_detail")
+
+
 @login_required
 def cart_remove(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     cart = Cart(request)
     cart.remove(product)
     messages.info(request, f"{product.name} è stato rimosso dal carrello.")
+    return redirect("orders:cart_detail")
+
+
+@require_POST
+@login_required
+def cart_clear(request):
+    """
+    Svuota completamente il carrello.
+    """
+    cart = Cart(request)
+    cart.clear()
+    messages.info(request, "Il carrello è stato svuotato.")
     return redirect("orders:cart_detail")
 
 
@@ -53,6 +94,7 @@ def checkout(request):
         if form.is_valid():
             structure = form.cleaned_data["structure"]
             payment_method = form.cleaned_data["payment_method"]
+            notes = form.cleaned_data.get("notes", "")
 
             subtotal = cart.get_total_price()
             shipping_cost = calculate_shipping(cart, structure)
@@ -66,6 +108,7 @@ def checkout(request):
                 shipping_cost=shipping_cost,
                 payment_method=payment_method,
                 total=total,
+                notes=notes,
             )
 
             # CREA RIGHE D’ORDINE
@@ -92,7 +135,7 @@ def checkout(request):
                     order_item.commission_rate = default_rate
                     order_item.calculate_commission(default_rate=default_rate)
                     order_item.save(
-                        update_fields=["commission_rate", "commission_amount"]
+                        update_fields=["commission_rate", "commission_amount", "partner_earnings"]
                     )
 
             # Svuota il carrello e mostra conferma
@@ -118,5 +161,49 @@ def checkout(request):
 
 @login_required
 def order_detail(request, order_id):
+    """
+    Dettaglio ordine lato cliente.
+
+    - mostra le righe ordine (items)
+    - mostra i messaggi legati all'ordine (order_messages)
+    - gestisce l'invio di un nuovo messaggio tramite POST
+    """
     order = get_object_or_404(Order, id=order_id, client=request.user)
-    return render(request, "orders/order_detail.html", {"order": order})
+
+    # Se arriva un POST, gestiamo l'invio del messaggio
+    if request.method == "POST":
+        text = (request.POST.get("message") or "").strip()
+
+        if text:
+            OrderMessage.objects.create(
+                order=order,
+                sender=request.user,
+                sender_role=OrderMessage.ROLE_CLIENT,
+                message=text,
+            )
+            messages.success(
+                request,
+                "Il tuo messaggio è stato inviato al partner.",
+            )
+        else:
+            messages.error(
+                request,
+                "Il messaggio non può essere vuoto.",
+            )
+
+        # redirect per evitare il re-invio del form con refresh
+        return redirect("orders:order_detail", order_id=order.id)
+
+    # Dati per il template (GET normale)
+    items = order.items.select_related("product", "partner").all()
+    order_messages = order.messages.all()
+
+    return render(
+        request,
+        "orders/order_detail.html",
+        {
+            "order": order,
+            "items": items,
+            "order_messages": order_messages,
+        },
+    )

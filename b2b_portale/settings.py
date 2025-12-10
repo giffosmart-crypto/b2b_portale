@@ -72,6 +72,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "partners.context_processors.partner_dashboard_counts",
                 "partners.context_processors.partner_sidebar_counters",
+                "orders.context_processors.cart_summary",
             ],
         },
     },
@@ -124,6 +125,7 @@ USE_TZ = True
 AUTH_USER_MODEL = 'accounts.User'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = '/login/'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

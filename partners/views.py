@@ -254,11 +254,16 @@ def partner_order_detail(request, order_id):
     if partner is None:
         return redirect("catalog:product_list")
 
-    order = get_object_or_404(
-        Order.objects.select_related("client", "structure"),
-        id=order_id,
-        items__partner=partner,
+    # queryset di ordini che hanno almeno una riga per questo partner
+    qs = (
+        Order.objects
+        .filter(items__partner=partner)
+        .distinct()  # evita duplicati se ci sono più righe per lo stesso ordine
+        .select_related("client", "structure")
     )
+
+    # recupero l'ordine, garantendo un solo record
+    order = get_object_or_404(qs, id=order_id)
 
     # Righe d'ordine di questo partner
     items = (
@@ -538,10 +543,12 @@ def partner_analytics(request):
 def partner_commissions(request):
     """
     Pagina riepilogo commissioni e pagamenti del partner.
-    Mostra:
-    - totale commissioni maturate (righe completate, ordini completati)
-    - totale commissioni pagate (da PartnerPayout)
-    - saldo da pagare
+
+    LATO PARTNER:
+    - totale GUADAGNO MATURATO = somma di partner_earnings
+      (cioè totale righe ordine meno commissione portale)
+    - totale GUADAGNO GIA' PAGATO = somma dei payout in stato 'Pagato'
+    - saldo da ricevere = maturato - pagato
     - elenco righe commissionate
     - elenco pagamenti registrati
     """
@@ -551,7 +558,8 @@ def partner_commissions(request):
 
     from django.db.models import Sum
 
-    # Righe completate che generano commissioni, SOLO su ordini completati
+    # Righe completate che generano GUADAGNO per il partner,
+    # solo su ordini COMPLETI (stato 'completed')
     items = (
         OrderItem.objects
         .filter(
@@ -563,10 +571,12 @@ def partner_commissions(request):
         .order_by("-order__created_at")
     )
 
-    # Totale commissioni maturate
-    total_commission_matured = (
-        items.aggregate(total=Sum("commission_amount")).get("total") or Decimal("0.00")
+    # 🔹 Totale GUADAGNO partner maturato (NON la commissione del portale)
+    totals = items.aggregate(
+        total_partner=Sum("partner_earnings"),
+        total_portal=Sum("commission_amount"),  # se vuoi usarlo altrove
     )
+    total_commission_matured = totals.get("total_partner") or Decimal("0.00")
 
     # Pagamenti registrati per il partner
     payouts = (
@@ -575,12 +585,14 @@ def partner_commissions(request):
         .order_by("-period_end", "-created_at")
     )
 
+    # 🔹 Importo già PAGATO al partner
     total_payout_paid = (
         payouts.filter(status=PartnerPayout.STATUS_PAID)
         .aggregate(total=Sum("total_commission"))
         .get("total") or Decimal("0.00")
     )
 
+    # 🔹 Saldo ancora da ricevere
     total_commission_unpaid = total_commission_matured - total_payout_paid
     if total_commission_unpaid < Decimal("0.00"):
         total_commission_unpaid = Decimal("0.00")

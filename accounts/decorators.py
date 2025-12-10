@@ -2,6 +2,8 @@ from functools import wraps
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 
+from .models import User
+
 
 def admin_required(view_func):
     """
@@ -20,3 +22,31 @@ def admin_required(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
+    
+def content_staff_required(view_func):
+    """
+    Permette l'accesso solo a:
+    - admin (User.ROLE_ADMIN)
+    - content manager (User.ROLE_CONTENT_MANAGER)
+
+    Usato per il modulo admin-panel delle recensioni.
+    """
+
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        user = request.user
+
+        if not user.is_authenticated:
+            return HttpResponseForbidden("Non sei autenticato.")
+
+        if getattr(user, "role", None) not in (
+            User.ROLE_ADMIN,
+            User.ROLE_CONTENT_MANAGER,
+        ):
+            return HttpResponseForbidden(
+                "Non hai i permessi per accedere a questa sezione."
+            )
+
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped

@@ -105,4 +105,18 @@ urlpatterns = [
         views.partner_payout_list,
         name="partner_payout_list",
     ),
+
+# ELENCO PAYOUT
+    path(
+        "partner-payouts/",
+        views.partner_payout_list,
+        name="partner_payout_list",
+    ),
+
+    # RECENSIONI PRODOTTI (BACKOFFICE)
+    path("reviews/", views.review_list, name="review_list"),
+    path("reviews/<int:pk>/", views.review_detail, name="review_detail"),
+    path("reviews/<int:pk>/approve/", views.review_approve, name="review_approve"),
+    path("reviews/<int:pk>/reject/", views.review_reject, name="review_reject"),
+    
 ]

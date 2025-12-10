@@ -19,4 +19,4 @@ def calculate_shipping(cart, structure):
     if total >= Decimal("200.00"):
         return Decimal("0.00")
 
-    return Decimal("9.90")
+    return Decimal("0.00")

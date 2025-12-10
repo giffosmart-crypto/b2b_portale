@@ -47,9 +47,22 @@
                                 {{ item.product.name }}
                             </td>
 
-                            <!-- Quantità -->
+                            <!-- Quantità con form di aggiornamento -->
                             <td class="px-3 py-2">
-                                {{ item.quantity }}
+                                <form action="{% url 'orders:cart_update' item.product.id %}"
+                                      method="post"
+                                      class="inline-flex items-center gap-2">
+                                    {% csrf_token %}
+                                    <input type="number"
+                                           name="quantity"
+                                           min="0"
+                                           value="{{ item.quantity }}"
+                                           class="w-16 rounded-lg border border-slate-200 px-2 py-1 text-sm text-right">
+                                    <button type="submit"
+                                            class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                        Aggiorna
+                                    </button>
+                                </form>
                             </td>
 
                             <!-- Prezzo unitario -->
@@ -77,8 +90,16 @@
             </table>
         </div>
 
-        <!-- Totale -->
-        <div class="flex justify-end mt-6">
+        <!-- Totale + svuota carrello -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mt-6 gap-3">
+            <form action="{% url 'orders:cart_clear' %}" method="post" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-sm text-rose-600 hover:text-rose-800">
+                    Svuota carrello
+                </button>
+            </form>
+
             <div class="text-right">
                 <p class="text-sm text-slate-500 uppercase">Totale carrello</p>
                 <p class="text-2xl font-semibold text-slate-900">
