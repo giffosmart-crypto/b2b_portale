@@ -140,3 +140,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "noreply@portale-b2b.local"
+
+SITE_BASE_URL = "http://localhost:8000"  # o il tuo dominio di test

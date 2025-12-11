@@ -13,50 +13,88 @@
   </div>
   <div class="card-body">
 
-    <form method="get" class="row gy-2 gx-3 align-items-end">
+    <form method="get" style="display:flex; flex-direction:column; gap:12px;">
 
-      <div class="col-12 col-md-3">
-        <label class="form-label">Stato ordine</label>
-        <select name="status" class="form-select">
-          <option value="">Tutti</option>
-          {% for value, label in orders.first.STATUS_CHOICES %}
-            <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
-              {{ label }}
-            </option>
-          {% endfor %}
-        </select>
+      <!-- RIGA 1: Stato, Cliente, Partner -->
+      <div style="display:flex; flex-wrap:wrap; gap:12px;">
+
+        <!-- Stato ordine -->
+        <div style="flex: 1 1 180px; min-width:180px;">
+          <label class="form-label" style="margin-bottom:4px;">Stato ordine</label>
+          <select name="status" class="form-select">
+            <option value="">Tutti</option>
+            {% if orders %}
+              {% for value, label in orders.first.STATUS_CHOICES %}
+                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+              {% endfor %}
+            {% endif %}
+          </select>
+        </div>
+
+        <!-- Cliente email -->
+        <div style="flex: 1 1 220px; min-width:220px;">
+          <label class="form-label" style="margin-bottom:4px;">Cliente (email)</label>
+          <input
+            type="text"
+            name="client"
+            class="form-control"
+            placeholder="email..."
+            value="{{ client_email }}"
+          >
+        </div>
+
+        <!-- Partner -->
+        <div style="flex: 1 1 220px; min-width:220px;">
+          <label class="form-label" style="margin-bottom:4px;">Partner</label>
+          <select name="partner" class="form-select">
+            <option value="">Tutti</option>
+            {% for p in partners %}
+              <option value="{{ p.id }}" {% if selected_partner == p.id %}selected{% endif %}>
+                {{ p.company_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
       </div>
 
-      <div class="col-12 col-md-3">
-        <label class="form-label">Cliente (email)</label>
-        <input type="text" name="client" class="form-control" placeholder="email..." value="{{ client_email }}">
-      </div>
+      <!-- RIGA 2: Date + Pulsanti -->
+      <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
 
-      <div class="col-12 col-md-3">
-        <label class="form-label">Partner</label>
-        <select name="partner" class="form-select">
-          <option value="">Tutti</option>
-          {% for p in partners %}
-            <option value="{{ p.id }}" {% if selected_partner == p.id %}selected{% endif %}>
-              {{ p.company_name }}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
+        <!-- Da data -->
+        <div style="flex: 1 1 180px; min-width:180px;">
+          <label class="form-label" style="margin-bottom:4px;">Da data</label>
+          <input
+            type="date"
+            name="date_from"
+            value="{{ date_from }}"
+            class="form-control"
+          >
+        </div>
 
-      <div class="col-6 col-md-3">
-        <label class="form-label">Da data</label>
-        <input type="date" name="date_from" value="{{ date_from }}" class="form-control">
-      </div>
+        <!-- A data -->
+        <div style="flex: 1 1 180px; min-width:180px;">
+          <label class="form-label" style="margin-bottom:4px;">A data</label>
+          <input
+            type="date"
+            name="date_to"
+            value="{{ date_to }}"
+            class="form-control"
+          >
+        </div>
 
-      <div class="col-6 col-md-3">
-        <label class="form-label">A data</label>
-        <input type="date" name="date_to" value="{{ date_to }}" class="form-control">
-      </div>
+        <!-- Bottoni -->
+        <div style="flex: 0 0 auto; margin-left:auto; display:flex; gap:8px;">
+          <button class="btn btn-primary" type="submit">
+            Filtra
+          </button>
+          <a href="" class="btn btn-secondary">
+            Reset
+          </a>
+        </div>
 
-      <div class="col-12 mt-2">
-        <button class="btn btn-primary" type="submit">Filtra</button>
-        <a href="" class="btn btn-secondary">Reset</a>
       </div>
 
     </form>

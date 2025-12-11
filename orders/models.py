@@ -76,6 +76,8 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    review_invite_sent_at = models.DateTimeField(null=True, blank=True)
+    review_reminder_sent_at = models.DateTimeField(null=True, blank=True)
     
     def recalculate_commissions(self):
         """
