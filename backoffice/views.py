@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
-from django.db.models import Count, Sum, F, ExpressionWrapper, DecimalField, Value, Q, Subquery, OuterRef
-from django.db.models.functions import Coalesce, TruncMonth, TruncDate
+from django.db.models import Count, Sum, F, ExpressionWrapper, DecimalField, Value, Q, Subquery, OuterRef, Window
+from django.db.models.functions import Coalesce, TruncMonth, TruncDate, RowNumber
 
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
@@ -8,6 +8,7 @@ from django.utils.dateparse import parse_date
 from django.contrib import messages
 from django.utils import timezone
 
+from urllib.parse import urlencode
 from decimal import Decimal
 import csv
 import json
@@ -580,9 +581,10 @@ def partner_commission_list(request):
     """
     Vista commissioni partner con:
     - total_revenue: somma delle righe ordine (order_items.total_price) nel periodo
-    - matured_commissions: commissioni maturate reali (sum commission_amount nel periodo)
-    - unliquidated_commissions: commissioni ancora da liquidare (sum commission_amount is_liquidated=False nel periodo)
-    - liquidated_commissions: commissioni già liquidate (sum commission_amount is_liquidated=True nel periodo)
+    - portal_commissions: commissioni maturate lato portale (commission_amount nel periodo)
+    - partner_earnings: quota maturata dai partner nel periodo
+    - unliquidated_commissions: commissioni ancora da liquidare (quota portale)
+    - liquidated_commissions: commissioni già liquidate (quota portale)
     """
 
     company = request.GET.get("company")
@@ -594,108 +596,125 @@ def partner_commission_list(request):
     start_date = parse_date(period_start_str) if period_start_str else None
     end_date = parse_date(period_end_str) if period_end_str else None
 
+    # Ha effettuato una ricerca solo se almeno un filtro è valorizzato
+    has_filters = any([company, email, active, start_date, end_date])
+
+    # base queryset
     qs = PartnerProfile.objects.select_related("user")
 
-    # filtri base (ragione sociale, email, attivo)
-    if company:
-        qs = qs.filter(company_name__icontains=company)
+    if has_filters:
+        # filtri base (ragione sociale, email, attivo)
+        if company:
+            qs = qs.filter(company_name__icontains=company)
 
-    if email:
-        qs = qs.filter(user__email__icontains=email)
+        if email:
+            qs = qs.filter(user__email__icontains=email)
 
-    if active == "yes":
-        qs = qs.filter(is_active=True)
-    elif active == "no":
-        qs = qs.filter(is_active=False)
+        if active == "yes":
+            qs = qs.filter(is_active=True)
+        elif active == "no":
+            qs = qs.filter(is_active=False)
 
-    # filtro periodo DA APPLICARE dentro le SUM
-    period_filter = Q()
-    if start_date:
-        period_filter &= Q(order_items__order__created_at__date__gte=start_date)
-    if end_date:
-        period_filter &= Q(order_items__order__created_at__date__lte=end_date)
+        # filtro periodo DA APPLICARE dentro le SUM
+        period_filter = Q()
+        if start_date:
+            period_filter &= Q(order_items__order__created_at__date__gte=start_date)
+        if end_date:
+            period_filter &= Q(order_items__order__created_at__date__lte=end_date)
 
-    # annotazioni per il periodo selezionato
-    qs = (
-        qs.annotate(
-            # fatturato del periodo
-            total_revenue = Coalesce(
-                Sum("order_items__total_price", filter=period_filter),
+        # annotazioni per il periodo selezionato
+        qs = (
+            qs.annotate(
+                # FATTURATO del periodo (tutto, partner + portale)
+                total_revenue=Coalesce(
+                    Sum("order_items__total_price", filter=period_filter),
+                    Value(Decimal("0.00")),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+            .annotate(
+                # COMMISSIONE PORTALE = somma commission_amount nel periodo
+                portal_commissions=Coalesce(
+                    Sum(
+                        "order_items__commission_amount",
+                        filter=period_filter,
+                    ),
+                    Value(Decimal("0.00")),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+            .annotate(
+                # IMPORTO PARTNER DA LIQUIDARE nel periodo
+                partner_earnings=Coalesce(
+                    Sum(
+                        "order_items__partner_earnings",
+                        filter=period_filter & Q(order_items__is_liquidated=False),
+                    ),
+                    Value(Decimal("0.00")),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+            .annotate(
+                # commissioni ancora da liquidare nel periodo (quota portale)
+                unliquidated_commissions=Coalesce(
+                    Sum(
+                        "order_items__commission_amount",
+                        filter=period_filter & Q(order_items__is_liquidated=False),
+                    ),
+                    Value(Decimal("0.00")),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+            .annotate(
+                # commissioni già liquidate nel periodo (quota portale)
+                liquidated_commissions=Coalesce(
+                    Sum(
+                        "order_items__commission_amount",
+                        filter=period_filter & Q(order_items__is_liquidated=True),
+                    ),
+                    Value(Decimal("0.00")),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
+            )
+            .order_by("company_name")
+        )
+
+        # ✅ Mostra SOLO i partner che nel periodo hanno ancora qualcosa da liquidare
+        qs = qs.filter(
+            unliquidated_commissions__gt=Decimal("0.00"),
+        )
+
+        # Totali calcolati solo sui partner ancora visibili
+        total_commissions = qs.aggregate(
+            total=Coalesce(
+                Sum("partner_earnings"),
                 Value(Decimal("0.00")),
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             )
-        )
-        .annotate(
-            # COMMISSIONE PORTALE = somma commission_amount nel periodo
-            portal_commissions = Coalesce(
-                Sum(
-                    "order_items__commission_amount",
-                    filter=period_filter,
-                ),
-                Value(Decimal("0.00")),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
-            )
-        )
-        .annotate(
-            # IMPORTO PARTNER = somma partner_earnings nel periodo
-            partner_earnings = Coalesce(
-                Sum(
-                    "order_items__partner_earnings",
-                    filter=period_filter,
-                ),
-                Value(Decimal("0.00")),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
-            )
-        )
-        .annotate(
-            # commissioni ancora da liquidare nel periodo (quota portale)
-            unliquidated_commissions = Coalesce(
-                Sum(
-                    "order_items__commission_amount",
-                    filter=period_filter & Q(order_items__is_liquidated=False),
-                ),
-                Value(Decimal("0.00")),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
-            )
-        )
-        .annotate(
-            # commissioni già liquidate nel periodo (quota portale)
-            liquidated_commissions = Coalesce(
-                Sum(
-                    "order_items__commission_amount",
-                    filter=period_filter & Q(order_items__is_liquidated=True),
-                ),
-                Value(Decimal("0.00")),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
-            )
-        )
-        .order_by("company_name")
-    )
+        )["total"]
 
-    # TOTALE COMMISSIONI MATURATE (reali) SU TUTTI I PARTNER
-    total_commissions = qs.aggregate(
-        total=Coalesce(
-            Sum("partner_earnings"),
-            Value(Decimal("0.00")),
-            output_field=DecimalField(max_digits=12, decimal_places=2),
-        )
-    )["total"]
+        total_to_liquidate = qs.aggregate(
+            total=Coalesce(
+                Sum("unliquidated_commissions"),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+        )["total"]
 
-    total_to_liquidate = qs.aggregate(
-        total=Coalesce(
-            Sum("unliquidated_commissions"),
-            Value(Decimal("0.00")),
-            output_field=DecimalField(max_digits=12, decimal_places=2),
-        )
-    )["total"]
+        total_liquidated = qs.aggregate(
+            total=Coalesce(
+                Sum("liquidated_commissions"),
+                Value(Decimal("0.00")),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
+        )["total"]
 
-    total_liquidated = qs.aggregate(
-        total=Coalesce(
-            Sum("liquidated_commissions"),
-            Value(Decimal("0.00")),
-            output_field=DecimalField(max_digits=12, decimal_places=2),
-        )
-    )["total"]
+    else:
+        # nessun filtro: non mostriamo alcun partner/valore
+        qs = PartnerProfile.objects.none()
+        total_commissions = Decimal("0.00")
+        total_to_liquidate = Decimal("0.00")
+        total_liquidated = Decimal("0.00")
 
     context = {
         "partners": qs,
@@ -707,6 +726,7 @@ def partner_commission_list(request):
         "total_commissions": total_commissions,
         "total_to_liquidate": total_to_liquidate,
         "total_liquidated": total_liquidated,
+        "show_results": has_filters,  # controlla la visibilità delle card nel template
     }
 
     return render(request, "backoffice/partner_commission_list.html", context)
@@ -1911,33 +1931,105 @@ def partner_commission_export_csv(request):
         ])
 
     return response
-    
+ 
+@admin_required
+def partner_payout_report(request, payout_id):
+    """
+    Versione 'report' del payout, pensata per la stampa / PDF.
+    Layout minimale stile report commissioni.
+    """
+    payout = get_object_or_404(
+        PartnerPayout.objects.select_related("partner", "partner__user"),
+        id=payout_id,
+    )
+
+    # Usiamo le righe collegate a questo payout
+    items_qs = (
+        payout.items
+        .select_related("order", "order__client", "product")
+        .order_by("order__created_at", "id")
+    )
+
+    aggregates = items_qs.aggregate(
+        total_row_amount=Coalesce(
+            Sum("total_price"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        ),
+        total_commission=Coalesce(
+            Sum("commission_amount"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        ),
+        total_partner_net=Coalesce(
+            Sum("partner_earnings"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        ),
+    )
+
+    context = {
+        "payout": payout,
+        "items": items_qs,
+        "total_row_amount": aggregates["total_row_amount"],
+        "total_commission": aggregates["total_commission"],
+        "total_partner_net": aggregates["total_partner_net"],
+    }
+    return render(request, "backoffice/partner_payout_report.html", context)
+ 
     
 @admin_required
 def partner_payout_create(request, partner_id):
     """
-    Crea (o aggiorna) un PartnerPayout per il partner e il periodo indicati.
-    Importo payout = somma di partner_earnings nel periodo (quota da liquidare al partner).
+    Crea o aggiorna un PartnerPayout per il partner e il periodo indicati.
+
+    Regole:
+    - Se esiste un payout in stato BOZZA per (partner, periodo) -> aggiunge le nuove righe
+      non liquidate al suo totale.
+    - Se NON esiste un payout in BOZZA (magari ce ne sono di già pagati) -> crea un
+      nuovo payout in stato BOZZA solo con le nuove righe.
+
+    In tutti i casi, le righe usate vengono marcate come is_liquidated=True.
     """
+
     partner = get_object_or_404(PartnerProfile, id=partner_id)
 
     if request.method != "POST":
         return HttpResponseRedirect(reverse("backoffice:partner_commission_list"))
 
+    # Filtri arrivati dal form nascosto (per tornare alla stessa vista filtrata)
+    company = request.POST.get("company")
+    email = request.POST.get("email")
+    active = request.POST.get("active")
     period_start_str = request.POST.get("period_start")
     period_end_str = request.POST.get("period_end")
 
     start_date = parse_date(period_start_str) if period_start_str else None
     end_date = parse_date(period_end_str) if period_end_str else None
 
+    # Costruiamo SUBITO l'URL di redirect con gli stessi filtri
+    base_url = reverse("backoffice:partner_commission_list")
+    params = {}
+    for name, value in [
+        ("company", company),
+        ("email", email),
+        ("active", active),
+        ("period_start", period_start_str),
+        ("period_end", period_end_str),
+    ]:
+        if value:
+            params[name] = value
+
+    redirect_url = f"{base_url}?{urlencode(params)}" if params else base_url
+
     if not start_date or not end_date:
         messages.error(
             request,
             "Devi specificare un periodo valido (dal/al) per creare un payout.",
         )
-        return HttpResponseRedirect(reverse("backoffice:partner_commission_list"))
+        return HttpResponseRedirect(redirect_url)
 
-    # Righe d'ordine del periodo, non ancora liquidate
+    # Righe d'ordine del periodo, NON ancora liquidate
     items_qs = OrderItem.objects.filter(
         partner=partner,
         order__created_at__date__gte=start_date,
@@ -1949,13 +2041,18 @@ def partner_payout_create(request, partner_id):
         messages.warning(
             request,
             "Non ci sono righe da liquidare nel periodo selezionato per questo partner "
-            "o sono già state tutte liquidate.",
+            "oppure sono già state tutte liquidate.",
         )
-        return HttpResponseRedirect(reverse("backoffice:partner_commission_list"))
+        return HttpResponseRedirect(redirect_url)
 
     # Assicuriamoci che commission_amount e partner_earnings siano valorizzati
     for item in items_qs:
-        if not item.commission_amount or item.commission_amount == 0 or item.partner_earnings == 0:
+        if (
+            item.commission_amount is None
+            or item.partner_earnings is None
+            or item.commission_amount == 0
+            or item.partner_earnings == 0
+        ):
             rate = (
                 item.commission_rate
                 or partner.default_commission_percent
@@ -1963,10 +2060,16 @@ def partner_payout_create(request, partner_id):
             )
             item.commission_rate = rate
             item.calculate_commission(default_rate=rate)
-            item.save(update_fields=["commission_rate", "commission_amount", "partner_earnings"])
+            item.save(
+                update_fields=[
+                    "commission_rate",
+                    "commission_amount",
+                    "partner_earnings",
+                ]
+            )
 
-    # Totale da liquidare al partner = somma partner_earnings
-    total_partner_earnings = items_qs.aggregate(
+    # Totale da liquidare AL PARTNER per queste NUOVE righe
+    new_partner_earnings = items_qs.aggregate(
         total=Coalesce(
             Sum("partner_earnings"),
             Value(Decimal("0.00")),
@@ -1974,39 +2077,70 @@ def partner_payout_create(request, partner_id):
         )
     )["total"]
 
-    payout, created = PartnerPayout.objects.get_or_create(
+    # Cerchiamo un payout ESISTENTE per questo partner/periodo in BOZZA
+    existing_draft = PartnerPayout.objects.filter(
         partner=partner,
         period_start=start_date,
         period_end=end_date,
-        defaults={
-            # questo campo ora rappresenta l'importo da liquidare al partner
-            "total_commission": total_partner_earnings,
-            "status": PartnerPayout.STATUS_DRAFT,
-        },
-    )
+        status=PartnerPayout.STATUS_DRAFT,
+    ).first()
 
-    if not created:
-        payout.total_commission = total_partner_earnings
-        payout.save(update_fields=["total_commission"])
+    # Cerchiamo qualunque payout (bozza o pagato) solo per messaggio informativo
+    existing_any = PartnerPayout.objects.filter(
+        partner=partner,
+        period_start=start_date,
+        period_end=end_date,
+    ).exclude(id=getattr(existing_draft, "id", None)).first()
+
+    if existing_draft:
+        # ➤ Caso 1 — aggiorno la bozza
+        previous_total = existing_draft.total_commission or Decimal("0.00")
+        existing_draft.total_commission = previous_total + new_partner_earnings
+        existing_draft.save(update_fields=["total_commission"])
+
+        payout = existing_draft
+
         messages.info(
             request,
-            f"Payout già esistente per questo partner e periodo: "
-            f"aggiornato l'importo partner a {total_partner_earnings:.2f} €.",
+            f"Payout in bozza già esistente per questo partner e periodo: "
+            f"aggiunti {new_partner_earnings:.2f} € (nuove righe). "
+            f"Totale aggiornato a {payout.total_commission:.2f} €.",
         )
     else:
-        messages.success(
-            request,
-            f"Creato payout in stato 'Bozza' per {partner.company_name} "
-            f"({start_date} → {end_date}) per {total_partner_earnings:.2f} € (importo partner).",
+        # ➤ Caso 2/3 — non esiste bozza: creo SEMPRE un nuovo payout
+        payout = PartnerPayout.objects.create(
+            partner=partner,
+            period_start=start_date,
+            period_end=end_date,
+            total_commission=new_partner_earnings,
+            status=PartnerPayout.STATUS_DRAFT,
         )
 
-    return HttpResponseRedirect(reverse("backoffice:partner_commission_list"))
+        if existing_any:
+            messages.warning(
+                request,
+                f"Esisteva già un payout per questo periodo ma non era in bozza "
+                f"(stato: {existing_any.get_status_display()}). "
+                f"Ne è stato creato uno nuovo in stato 'Bozza'.",
+            )
+        else:
+            messages.success(
+                request,
+                f"Creato nuovo payout in stato 'Bozza' per {partner.company_name} "
+                f"({start_date} → {end_date}) per {new_partner_earnings:.2f} € (importo partner).",
+            )
+
+    # Le righe appena usate in questo payout diventano liquidate
+    items_qs.update(is_liquidated=True, payout=payout)
+
+    return HttpResponseRedirect(redirect_url)
     
     
 @admin_required
 def partner_payout_list(request):
     """
-    Elenco dei PartnerPayout con filtri base (partner, stato).
+    Elenco dei PartnerPayout con filtri base (partner, stato),
+    con numerazione batch per partner + periodo.
     """
     partner_id = request.GET.get("partner")
     status = request.GET.get("status")
@@ -2019,7 +2153,14 @@ def partner_payout_list(request):
     if status:
         qs = qs.filter(status=status)
 
-    qs = qs.order_by("-period_end", "-created_at")
+    # Annotiamo il numero di batch per (partner, periodo_start, periodo_end)
+    qs = qs.annotate(
+        batch_number=Window(
+            expression=RowNumber(),
+            partition_by=[F("partner_id"), F("period_start"), F("period_end")],
+            order_by=F("created_at").asc(),
+        )
+    ).order_by("-period_end", "-created_at")
 
     # partner per la tendina filtri
     partners = PartnerProfile.objects.order_by("company_name")
@@ -2043,7 +2184,53 @@ def partner_payout_list(request):
 
     return render(request, "backoffice/partner_payout_list.html", context)
     
-    
+@admin_required
+def partner_payout_detail(request, payout_id):
+    """
+    Dettaglio di un PartnerPayout con elenco righe ordine coinvolte.
+    La pagina è pensata anche per essere stampata / salvata in PDF dal browser.
+    """
+    payout = get_object_or_404(
+        PartnerPayout.objects.select_related("partner", "partner__user"),
+        id=payout_id,
+    )
+
+    # Righe d'ordine incluse in QUESTO payout (legate via OrderItem.payout)
+    items_qs = (
+        payout.items
+        .select_related("order", "order__client", "product")
+        .order_by("-order__created_at", "id")
+    )
+
+    # Totali di comodo (calcolati solo sulle righe di questo payout)
+    aggregates = items_qs.aggregate(
+        total_row_amount=Coalesce(
+            Sum("total_price"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        ),
+        total_commission=Coalesce(
+            Sum("commission_amount"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        ),
+        total_partner_net=Coalesce(
+            Sum("partner_earnings"),
+            Value(Decimal("0.00")),
+            output_field=DecimalField(max_digits=12, decimal_places=2),
+        ),
+    )
+
+    context = {
+        "payout": payout,
+        "items": items_qs,
+        "total_row_amount": aggregates["total_row_amount"],
+        "total_commission": aggregates["total_commission"],
+        "total_partner_net": aggregates["total_partner_net"],
+    }
+    return render(request, "backoffice/partner_payout_detail.html", context)
+ 
+ 
 @admin_required
 def unliquidated_commission_list(request):
     """

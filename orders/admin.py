@@ -1,5 +1,7 @@
 from django.contrib import admin
 from .models import Order, OrderItem, PartnerPayout
+from django.core.files.base import ContentFile
+from .pdf_utils import render_payout_pdf_bytes
 
 
 class OrderItemInline(admin.TabularInline):
@@ -67,3 +69,26 @@ class PartnerPayoutAdmin(admin.ModelAdmin):
         self.message_user(request, f"{updated} payout segnati come CONFERMATI.")
 
     mark_as_confirmed.short_description = "Segna come CONFERMATI i payout selezionati"
+    
+    def save_model(self, request, obj, form, change):
+        # Salviamo prima lo stato aggiornato
+        old_status = None
+        if change and obj.pk:
+            try:
+                old_status = PartnerPayout.objects.get(pk=obj.pk).status
+            except PartnerPayout.DoesNotExist:
+                old_status = None
+
+        super().save_model(request, obj, form, change)
+
+        # Se è stato appena messo su "Pagato" e NON ha ancora ricevuta → genera PDF
+        if (
+            obj.status == PartnerPayout.STATUS_PAID
+            and old_status != PartnerPayout.STATUS_PAID
+            and not obj.payment_receipt  # nome campo FileField
+        ):
+            pdf_bytes = render_payout_pdf_bytes(obj)
+            filename = f"payout_{obj.id}.pdf"
+
+            # Salva il file sul FileField
+            obj.payment_receipt.save(filename, ContentFile(pdf_bytes), save=True)

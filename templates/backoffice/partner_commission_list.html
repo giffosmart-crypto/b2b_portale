@@ -1,4 +1,3 @@
-
 {% extends "backoffice/base_admin.html" %}
 
 {% block page_title %}Commissioni Partner{% endblock %}
@@ -14,8 +13,17 @@
 
 <!-- FILTRI -->
 <div class="card mb-6">
+    <div class="card-header flex items-center justify-between gap-4">
+        <div>
+            <strong>Filtra partner</strong>
+            <p class="text-xs text-slate-500 mt-1">
+                Usa i filtri per restringere l’elenco dei partner e calcolare commissioni e payout sul periodo selezionato.
+            </p>
+        </div>
+    </div>
+
     <div class="card-body">
-        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
             <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1">
@@ -41,6 +49,19 @@
 
             <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1">
+                    Attivo
+                </label>
+                <select name="active"
+                        class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm
+                               bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="" {% if not active %}selected{% endif %}>Tutti</option>
+                    <option value="yes" {% if active == "yes" %}selected{% endif %}>Solo attivi</option>
+                    <option value="no" {% if active == "no" %}selected{% endif %}>Solo disattivi</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">
                     Periodo da
                 </label>
                 <input type="date"
@@ -61,21 +82,9 @@
                               focus:outline-none focus:ring-2 focus:ring-indigo-500">
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">
-                    Attivo
-                </label>
-                <select name="active"
-                        class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm
-                               focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">Tutti</option>
-                    <option value="yes" {% if active == "yes" %}selected{% endif %}>Solo attivi</option>
-                    <option value="no" {% if active == "no" %}selected{% endif %}>Solo non attivi</option>
-                </select>
-            </div>
-
-            <div class="flex gap-3 flex-wrap">
-                <button class="btn btn-primary text-sm" type="submit">
+            <div class="flex items-end gap-3">
+                <button type="submit"
+                        class="btn btn-primary text-sm">
                     Filtra
                 </button>
 
@@ -84,7 +93,7 @@
                     Reset
                 </a>
 
-                <a href="{% url 'backoffice:partner_commission_export_csv' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+                <a href="{% url 'backoffice:partner_commission_list' %}{% if request.GET %}?{{ request.GET.urlencode }}&export=1{% else %}?export=1{% endif %}"
                    class="btn btn-outline text-sm">
                     Esporta CSV
                 </a>
@@ -94,7 +103,7 @@
     </div>
 </div>
 
-<!-- CARDS PARTNER -->
+<!-- CARDS PARTNER - sempre visibile -->
 <div class="card">
     <div class="card-header flex items-center justify-between">
         <strong>Commissioni partner</strong>
@@ -121,10 +130,11 @@
     </div>
 
     <div class="card-body">
-        {% if partners %}
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {% if show_results %}
+            {% if partners %}
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 
-                {% for p in partners %}
+                    {% for p in partners %}
                     <div class="border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow bg-white flex flex-col justify-between">
 
                         <!-- header card -->
@@ -143,7 +153,7 @@
                                         Attivo
                                     </span>
                                 {% else %}
-                                    <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-rose-100 text-rose-700">
+                                    <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-slate-100 text-slate-500">
                                         Disattivo
                                     </span>
                                 {% endif %}
@@ -159,12 +169,6 @@
                                 </span>
                             </div>
                             <div class="flex items-center justify-between text-xs">
-                                <span class="text-slate-500">Fatturato del periodo</span>
-                                <span class="font-semibold text-slate-900">
-                                    {{ p.total_revenue|default:0|floatformat:2 }} €
-                                </span>
-                            </div>
-                            <div class="flex items-center justify-between text-xs">
                                 <span class="text-slate-500">Importo partner (maturato)</span>
                                 <span class="font-semibold text-indigo-700">
                                     {{ p.partner_earnings|default:0|floatformat:2 }} €
@@ -176,7 +180,6 @@
                                     {{ p.unliquidated_commissions|default:0|floatformat:2 }} €
                                 </span>
                             </div>
-
                         </div>
 
                         <!-- azioni -->
@@ -185,6 +188,10 @@
                                   action="{% url 'backoffice:partner_payout_create' p.id %}"
                                   class="mt-1">
                                 {% csrf_token %}
+                                <!-- filtri da mantenere al ritorno -->
+                                <input type="hidden" name="company" value="{{ company }}">
+                                <input type="hidden" name="email" value="{{ email }}">
+                                <input type="hidden" name="active" value="{{ active }}">
                                 <input type="hidden" name="period_start" value="{{ period_start }}">
                                 <input type="hidden" name="period_end" value="{{ period_end }}">
 
@@ -211,17 +218,23 @@
                         </div>
 
                     </div>
-                {% endfor %}
+                    {% endfor %}
 
-            </div>
+                </div>
+            {% else %}
+                <p class="text-sm text-slate-500 text-center py-6">
+                    Nessun partner trovato con i filtri selezionati.
+                </p>
+            {% endif %}
         {% else %}
             <p class="text-sm text-slate-500 text-center py-6">
-                Nessun partner trovato con i filtri selezionati.
+                Usa i filtri in alto per visualizzare le commissioni dei partner nel periodo desiderato.
             </p>
         {% endif %}
     </div>
 </div>
 
+<!-- Totali -->
 <div class="mt-6 pt-4 border-t border-slate-200 flex flex-col items-end gap-1">
     <div>
         <span class="text-xs text-slate-500 mr-2">
@@ -240,7 +253,6 @@
             {{ total_to_liquidate|default:0|floatformat:2 }} €
         </span>
     </div>
-
 </div>
 
 {% if not period_start or not period_end %}
@@ -250,7 +262,6 @@
 </p>
 {% endif %}
 
-{# MODAL ADMIN DJANGO #}
 <div id="adminModal"
      class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden">
@@ -271,12 +282,14 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  const links = document.querySelectorAll('.js-admin-popup');
-  const modal = document.getElementById('adminModal');
-  const iframe = document.getElementById('adminModalFrame');
-  const closeBtn = document.getElementById('adminModalClose');
+  var modal = document.getElementById('adminModal');
+  var iframe = document.getElementById('adminModalFrame');
+  var closeBtn = document.getElementById('adminModalClose');
+  var links = document.querySelectorAll('.js-admin-popup');
 
-  if (!modal || !iframe || !closeBtn) return;
+  if (!modal || !iframe || !closeBtn || !links.length) {
+    return;
+  }
 
   links.forEach(function (link) {
     link.addEventListener('click', function (e) {

@@ -119,6 +119,13 @@ class OrderItem(models.Model):
         (PARTNER_STATUS_REJECTED, "Rifiutato"),
     ]
 
+    payout = models.ForeignKey(
+        "orders.PartnerPayout",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="items",
+    )
     order = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name="items"
     )

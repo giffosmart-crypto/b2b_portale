@@ -118,5 +118,6 @@ urlpatterns = [
     path("reviews/<int:pk>/", views.review_detail, name="review_detail"),
     path("reviews/<int:pk>/approve/", views.review_approve, name="review_approve"),
     path("reviews/<int:pk>/reject/", views.review_reject, name="review_reject"),
-    
+    path("partner-payouts/<int:payout_id>/", views.partner_payout_detail, name="partner_payout_detail"),
+    path("partner-payouts/<int:payout_id>/report/", views.partner_payout_report, name="partner_payout_report"),
 ]
