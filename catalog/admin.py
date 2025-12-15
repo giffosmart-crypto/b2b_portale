@@ -24,6 +24,7 @@ class ProductImageInline(admin.TabularInline):
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "is_active")
+    search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
 
 
@@ -32,11 +33,49 @@ class CategoryAdmin(admin.ModelAdmin):
 # ----------------------------
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "supplier", "base_price", "is_active")
-    list_filter = ("category", "supplier", "is_active")
-    search_fields = ("name", "short_description")
+    list_display = (
+        "name",
+        "supplier",
+        "category",
+        "base_price",
+        "partner_commission_rate",  # 👈 visibile subito in lista
+        "is_active",
+    )
+    list_filter = ("supplier", "category", "is_active")
+    search_fields = (
+        "name",
+        "supplier__company_name",
+        "category__name",
+        "short_description",
+    )
+    autocomplete_fields = ("supplier", "category")
     prepopulated_fields = {"slug": ("name",)}
-    inlines = [KitComponentInline, ProductImageInline]
+
+    fieldsets = (
+        (
+            "Informazioni prodotto",
+            {
+                "fields": (
+                    "name",
+                    "slug",
+                    "supplier",
+                    "category",
+                    "short_description",
+                    "description",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Prezzi e commissioni",
+            {
+                "fields": (
+                    "base_price",
+                    "partner_commission_rate",  # 👈 editabile in modo chiaro
+                )
+            },
+        ),
+    )
 
 
 # ----------------------------

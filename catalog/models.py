@@ -61,6 +61,18 @@ class Product(models.Model):
     unit = models.CharField(
         "Unità di prezzo", max_length=20, choices=UNIT_CHOICES, default=UNIT_PER_KIT
     )
+    
+    partner_commission_rate = models.DecimalField(
+        "Commissione specifica prodotto (%)",
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text=(
+            "Se valorizzato, questo valore viene usato come commissione "
+            "per questo prodotto (priorità più alta)."
+        ),
+    )
 
     main_image = models.ImageField(
         "Immagine principale",

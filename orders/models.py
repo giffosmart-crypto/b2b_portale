@@ -2,6 +2,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from .utils import get_commission_rate_for_item
 
 
 class Order(models.Model):
@@ -188,25 +189,32 @@ class OrderItem(models.Model):
         return f"{self.product} x{self.quantity}"
 
     # 🔹 METODO DI SUPPORTO
-    # 🔹 METODO DI SUPPORTO
     def calculate_commission(self, default_rate=None):
         """
-        Calcola la commissione spettante al portale e il netto partner.
+        Calcola la commissione del portale e il netto partner.
 
-        - commission_amount = quota portale (totale * rate / 100)
-        - partner_earnings  = quota partner (totale - commission_amount)
+        Priorità della percentuale di commissione:
+        1) default_rate passato esplicitamente (se non None)
+        2) get_commission_rate_for_item(self.partner, self.product)
         """
-        rate = default_rate or self.commission_rate or Decimal("0.00")
-        self.commission_rate = rate
+
+        if default_rate is not None:
+            rate = default_rate
+        else:
+            rate = get_commission_rate_for_item(self.partner, self.product)
+
+        # normalizza
+        self.commission_rate = rate or Decimal("0.00")
 
         gross = self.total_price or Decimal("0.00")
 
         # quota portale
-        commission = (gross * rate) / Decimal("100.00")
-        self.commission_amount = commission.quantize(Decimal("0.01"))
+        commission = (gross * self.commission_rate) / Decimal("100.00")
+        commission = commission.quantize(Decimal("0.01"))
+        self.commission_amount = commission
 
         # quota partner
-        partner_net = gross - self.commission_amount
+        partner_net = gross - commission
         self.partner_earnings = partner_net.quantize(Decimal("0.01"))
 
 

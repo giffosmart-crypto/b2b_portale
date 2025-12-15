@@ -11,6 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent.parent  # se non è già definito
+
+STATIC_ROOT = BASE_DIR / "staticfiles"  # cartella di destinazione per collectstatic
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -131,6 +134,7 @@ LOGIN_URL = '/login/'
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from decimal import Decimal
+from catalog.models import Category
 
 
 class PartnerProfile(models.Model):
@@ -34,6 +36,44 @@ class PartnerProfile(models.Model):
 
     def __str__(self) -> str:
         return self.company_name
+        
+    
+class PartnerCategoryCommission(models.Model):
+    """
+    Commissione per coppia (partner, categoria prodotto).
+
+    Priorità:
+    - se esiste commissione specifica prodotto -> quella vince
+    - altrimenti si cerca una PartnerCategoryCommission per (partner, category)
+    - altrimenti si usa la commissione di default del partner
+    """
+    partner = models.ForeignKey(
+        "partners.PartnerProfile",
+        on_delete=models.CASCADE,
+        related_name="category_commissions",
+        verbose_name="Partner",
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="partner_commissions",
+        verbose_name="Categoria prodotto",
+    )
+    commission_rate = models.DecimalField(
+        "Commissione categoria (%)",
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        help_text="Percentuale di commissione per questa categoria (es. 12.50).",
+    )
+
+    class Meta:
+        verbose_name = "Commissione per categoria"
+        verbose_name_plural = "Commissioni per categoria"
+        unique_together = ("partner", "category")
+
+    def __str__(self) -> str:
+        return f"{self.partner} - {self.category} ({self.commission_rate}%)"
 
 
 # ============================================================
