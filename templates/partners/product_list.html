@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Catalogo prodotti{% endblock %}
+{% block page_title %}Catalogo prodotti{% endblock %}
+
+{% block content %}
+
+<!-- INTRO -->
+<div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+        <p class="text-slate-600 text-sm">
+            Qui puoi gestire i prodotti associati al tuo profilo partner.
+        </p>
+    </div>
+
+    <div>
+        <a href="{% url 'partners:product_create' %}"
+           class="inline-flex items-center rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+            + Nuovo prodotto
+        </a>
+    </div>
+</div>
+
+<!-- TABELLA PRODOTTI -->
+{% if products %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-slate-200 rounded-xl text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">Nome</th>
+                    <th class="px-3 py-2 text-left">Categoria</th>
+                    <th class="px-3 py-2 text-left">Prezzo base</th>
+                    <th class="px-3 py-2 text-left">Unità</th>
+                    <th class="px-3 py-2 text-left">Tipo</th>
+                    <th class="px-3 py-2 text-left">Stato</th>
+                    <th class="px-3 py-2 text-left">Azioni</th>
+                </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+                {% for product in products %}
+                    <tr class="hover:bg-slate-50">
+
+                        <!-- Nome -->
+                        <td class="px-3 py-2 font-medium text-slate-900">
+                            {{ product.name }}
+                        </td>
+
+                        <!-- Categoria -->
+                        <td class="px-3 py-2">
+                            {{ product.category.name|default:"-" }}
+                        </td>
+
+                        <!-- Prezzo -->
+                        <td class="px-3 py-2 font-medium text-slate-900">
+                            {{ product.base_price }} €
+                        </td>
+
+                        <!-- Unità -->
+                        <td class="px-3 py-2">
+                            {{ product.get_unit_display|default:product.unit }}
+                        </td>
+
+                        <!-- Tipo: servizio/prodotto -->
+                        <td class="px-3 py-2">
+                            {% if product.is_service %}
+                                <span class="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-0.5 text-xs font-medium">
+                                    Servizio
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center rounded-full bg-slate-50 text-slate-700 px-2.5 py-0.5 text-xs font-medium">
+                                    Prodotto
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Stato attivo -->
+                        <td class="px-3 py-2">
+                            {% if product.is_active %}
+                                <span class="inline-flex items-center rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-0.5 text-xs font-medium">
+                                    Attivo
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center rounded-full bg-rose-50 text-rose-700 px-2.5 py-0.5 text-xs font-medium">
+                                    Disattivato
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Azioni -->
+                        <td class="px-3 py-2">
+                            <a href="{% url 'partners:product_edit' product.id %}"
+                               class="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                                Modifica
+                            </a>
+                        </td>
+
+                    </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
+{% else %}
+    <p class="text-slate-500 text-sm">
+        Non hai ancora definito prodotti nel tuo catalogo.
+        Usa il pulsante <strong>“Nuovo prodotto”</strong> per creare il primo.
+    </p>
+{% endif %}
+
+{% endblock %}

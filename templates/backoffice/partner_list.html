@@ -1,0 +1,61 @@
+{% extends "backoffice/base_admin.html" %}
+
+{% block page_title %}Partner{% endblock %}
+
+{% block admin_content %}
+
+<h1 class="mb-4">Partner</h1>
+
+<div class="card">
+  <div class="card-header bg-info text-white">
+    <strong>Elenco partner</strong>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-striped table-hover table-sm mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Ragione sociale</th>
+          <th>Email</th>
+          <th>Partita IVA</th>
+          <th>Commissione (%)</th>
+          <th>Stato</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in partners %}
+        <tr>
+          <td>{{ p.company_name }}</td>
+          <td>
+            {% if p.user %}
+              {{ p.user.email }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>{{ p.vat_number }}</td>
+          <td>{{ p.default_commission_percent }}</td>
+          <td>
+            {% if p.is_active %}
+              <span class="badge bg-success">Attivo</span>
+            {% else %}
+              <span class="badge bg-secondary">Non attivo</span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <a href="{% url 'backoffice:order_list' %}?partner={{ p.id }}" class="btn btn-sm btn-primary">
+              Ordini
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center">Nessun partner trovato.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,274 @@
+{% extends "backoffice/base_admin.html" %}
+
+{% block page_title %}Dashboard amministratore{% endblock %}
+
+{% block admin_content %}
+
+<div class="mb-6">
+  <h1 class="text-xl md:text-2xl font-semibold text-slate-900 mb-1">
+    Dashboard amministratore
+  </h1>
+  <p class="text-sm text-slate-500">
+    Panoramica veloce su ordini, fatturato e partner del portale B2B.
+  </p>
+</div>
+
+<!-- KPI CARDS -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+  <!-- Fatturato totale -->
+  <div class="card relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-sky-500/5 to-emerald-500/5"></div>
+    <div class="relative card-body">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+        Fatturato totale
+      </p>
+      <p class="text-2xl font-semibold text-slate-900 mb-1">
+        {{ total_revenue|floatformat:2 }} €
+      </p>
+      <p class="text-xs text-slate-500">
+        Somma degli ordini non annullati.
+      </p>
+    </div>
+  </div>
+
+  <!-- Numero stati monitorati -->
+  <div class="card">
+    <div class="card-body">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+        Stati ordine monitorati
+      </p>
+      <p class="text-2xl font-semibold text-slate-900 mb-1">
+        {{ orders_by_status|length }}
+      </p>
+      <p class="text-xs text-slate-500">
+        Numero di stati con almeno un ordine presente.
+      </p>
+    </div>
+  </div>
+
+  <!-- Ordini critici -->
+  <div class="card">
+    <div class="card-body">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
+        Ordini critici
+      </p>
+      <p class="text-2xl font-semibold text-amber-600 mb-1">
+        {{ critical_orders|length }}
+      </p>
+      <p class="text-xs text-slate-500 mb-2">
+        pending_payment / processing
+      </p>
+      <a href="{% url 'backoffice:order_list' %}?status=pending_payment"
+         class="btn btn-sm btn-primary">
+        Vai alla lista ordini
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- SEZIONE RIEPILOGHI -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+
+  <!-- Ordini per stato -->
+  <div class="card lg:col-span-1">
+    <div class="card-header bg-primary text-white">
+      <strong>Ordini per stato</strong>
+    </div>
+    <div class="card-body">
+      <table class="table table-sm mb-0">
+        <tbody>
+        {% for row in orders_by_status %}
+          <tr>
+            <td class="text-sm">{{ row.status|capfirst }}</td>
+            <td class="text-right"><strong>{{ row.total }}</strong></td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="2">Nessun ordine disponibile.</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top partner -->
+  <div class="card lg:col-span-2">
+    <div class="card-header bg-info text-white">
+      <strong>Top Partner per fatturato</strong>
+    </div>
+    <div class="card-body">
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>Partner</th>
+            <th class="text-right">Fatturato (€)</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for p in partner_revenue %}
+          <tr>
+            <td class="text-sm">{{ p.partner__company_name }}</td>
+            <td class="text-right"><strong>{{ p.total }}</strong></td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="2">Nessun dato disponibile.</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ORDINI CRITICI - LISTA DETTAGLIATA -->
+<div class="card">
+  <div class="card-header bg-warning">
+    <strong>Ordini critici</strong>
+    <span class="text-xs font-normal ml-2 text-slate-800">
+      (pending_payment / processing)
+    </span>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-striped table-sm mb-0">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Cliente</th>
+          <th>Stato</th>
+          <th>Data</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in critical_orders %}
+        <tr>
+          <td>#{{ o.id }}</td>
+          <td>{{ o.client.email }}</td>
+          <td>{{ o.status }}</td>
+          <td>{{ o.created_at|date:"d/m/Y H:i" }}</td>
+          <td class="text-right">
+            <a href="{% url 'backoffice:order_detail' o.id %}" class="btn btn-sm btn-primary">
+              Dettaglio
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center">Nessun ordine critico.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Container notifiche LIVE -->
+<div id="live-toasts" class="fixed bottom-4 right-4 flex flex-col gap-2 z-50"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+  {{ block.super }}
+  <script>
+    (function() {
+      const endpoint = "{% url 'backoffice:dashboard_live_stats' %}";
+
+      let initialized = false;
+      let lastOrderId = null;
+      let lastCommissionId = null;
+      let lastPayoutId = null;
+
+      function createToast(type, message) {
+        const container = document.getElementById("live-toasts");
+        if (!container) return;
+
+        const el = document.createElement("div");
+        el.className =
+          "bg-slate-900 text-white rounded-lg shadow-lg px-3 py-2 text-sm flex items-center gap-2";
+
+        let icon = "";
+        if (type === "order") {
+          icon = "🧾";
+        } else if (type === "commission") {
+          icon = "💶";
+        } else if (type === "payout") {
+          icon = "🏦";
+        }
+
+        el.innerHTML = "<span>" + icon + "</span><span>" + message + "</span>";
+
+        container.appendChild(el);
+
+        // Auto-hide dopo 5 secondi con fade-out
+        setTimeout(function() {
+          el.classList.add("opacity-0", "transition-opacity", "duration-500");
+          setTimeout(function() {
+            if (el.parentNode) {
+              el.parentNode.removeChild(el);
+            }
+          }, 500);
+        }, 5000);
+      }
+
+      function checkForUpdates() {
+        fetch(endpoint, { credentials: "same-origin" })
+          .then(function(response) { return response.json(); })
+          .then(function(data) {
+            if (!initialized) {
+              // Primo giro: memorizzo solo gli ID, niente notifiche
+              lastOrderId = data.last_order_id;
+              lastCommissionId = data.last_commission_id;
+              lastPayoutId = data.last_payout_id;
+              initialized = true;
+              return;
+            }
+
+            // Nuovo ordine
+            if (data.last_order_id && data.last_order_id !== lastOrderId) {
+              createToast(
+                "order",
+                "Nuovo ordine #" + data.last_order_id + " creato."
+              );
+              lastOrderId = data.last_order_id;
+            }
+
+            // Nuova commissione maturata
+            if (data.last_commission_id && data.last_commission_id !== lastCommissionId) {
+              const orderId = data.last_commission_order_id || "";
+              createToast(
+                "commission",
+                "Nuova commissione maturata" +
+                  (orderId ? " sull’ordine #" + orderId : "") +
+                  "."
+              );
+              lastCommissionId = data.last_commission_id;
+            }
+
+            // Nuovo payout generato
+            if (data.last_payout_id && data.last_payout_id !== lastPayoutId) {
+              createToast(
+                "payout",
+                "Nuovo payout generato (ID #" + data.last_payout_id + ")."
+              );
+              lastPayoutId = data.last_payout_id;
+            }
+          })
+          .catch(function(error) {
+            console.error("Errore nel polling LIVE dashboard:", error);
+          });
+      }
+
+      document.addEventListener("DOMContentLoaded", function() {
+        // Primo check dopo il caricamento
+        checkForUpdates();
+        // Poi ogni 10 secondi
+        setInterval(checkForUpdates, 10000);
+      });
+    })();
+  </script>
+{% endblock %}

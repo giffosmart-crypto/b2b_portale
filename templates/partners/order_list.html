@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Ordini da evadere{% endblock %}
+{% block page_title %}Ordini da evadere{% endblock %}
+
+{% block content %}
+
+<div class="mb-6">
+    <p class="text-slate-600 text-sm">
+        Qui trovi tutti gli ordini che includono righe assegnate a te come partner.
+    </p>
+</div>
+
+<div class="bg-white border border-slate-200 rounded-2xl p-6">
+
+    <h2 class="text-lg font-semibold text-slate-900 mb-4">
+        Elenco ordini
+    </h2>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-slate-200 rounded-xl">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">ID</th>
+                    <th class="px-3 py-2 text-left">Cliente</th>
+                    <th class="px-3 py-2 text-left">Struttura</th>
+                    <th class="px-3 py-2 text-left">Data</th>
+                    <th class="px-3 py-2 text-left">Totale</th>
+                    <th class="px-3 py-2 text-left">Stato ordine</th>
+                    <th class="px-3 py-2 text-right">Azioni</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for order in orders %}
+                    <tr class="hover:bg-slate-50">
+
+                        <td class="px-3 py-2">
+                            #{{ order.id }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {{ order.client.username }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {{ order.structure.name }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {{ order.created_at|date:"d/m/Y H:i" }}
+                        </td>
+
+                        <td class="px-3 py-2 font-medium text-slate-900">
+                            € {{ order.total }}
+                        </td>
+
+                        <td class="px-3 py-2">
+                            {{ order.get_status_display }}
+                        </td>
+
+                        <td class="px-3 py-2 text-right flex items-center justify-end gap-3">
+
+                            <!-- BADGE NUOVI MESSAGGI -->
+                            {% if order.unread_messages %}
+                                <span class="inline-flex items-center justify-center h-5 w-5 rounded-full bg-red-600 text-white text-[10px] font-bold">
+                                    !
+                                </span>
+                            {% endif %}
+
+                            <a href="{% url 'partners:order_detail' order.id %}"
+                               class="inline-flex items-center rounded-xl bg-blue-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-blue-700">
+                                Vedi
+                            </a>
+
+                        </td>
+
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-3 py-4 text-center text-slate-500">
+                            Nessun ordine trovato.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

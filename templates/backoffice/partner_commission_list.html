@@ -1,0 +1,316 @@
+{% extends "backoffice/base_admin.html" %}
+
+{% block page_title %}Commissioni Partner{% endblock %}
+
+{% block admin_content %}
+
+<h1 class="text-xl md:text-2xl font-semibold text-slate-900 mb-2">
+    Commissioni partner
+</h1>
+<p class="text-sm text-slate-500 mb-6">
+    Gestisci le percentuali di commissione e il fatturato generato dai partner sugli ordini.
+</p>
+
+<!-- FILTRI -->
+<div class="card mb-6">
+    <div class="card-header flex items-center justify-between gap-4">
+        <div>
+            <strong>Filtra partner</strong>
+            <p class="text-xs text-slate-500 mt-1">
+                Usa i filtri per restringere l’elenco dei partner e calcolare commissioni e payout sul periodo selezionato.
+            </p>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">
+                    Ragione sociale
+                </label>
+                <input type="text"
+                       name="company"
+                       value="{{ company }}"
+                       class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">
+                    Email partner
+                </label>
+                <input type="text"
+                       name="email"
+                       value="{{ email }}"
+                       class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">
+                    Attivo
+                </label>
+                <select name="active"
+                        class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm
+                               bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <option value="" {% if not active %}selected{% endif %}>Tutti</option>
+                    <option value="yes" {% if active == "yes" %}selected{% endif %}>Solo attivi</option>
+                    <option value="no" {% if active == "no" %}selected{% endif %}>Solo disattivi</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">
+                    Periodo da
+                </label>
+                <input type="date"
+                       name="period_start"
+                       value="{{ period_start }}"
+                       class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">
+                    Periodo a
+                </label>
+                <input type="date"
+                       name="period_end"
+                       value="{{ period_end }}"
+                       class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm
+                              focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div class="flex items-end gap-3">
+                <button type="submit"
+                        class="btn btn-primary text-sm">
+                    Filtra
+                </button>
+
+                <a href="{% url 'backoffice:partner_commission_list' %}"
+                   class="btn btn-secondary text-sm">
+                    Reset
+                </a>
+
+                <a href="{% url 'backoffice:partner_commission_list' %}{% if request.GET %}?{{ request.GET.urlencode }}&export=1{% else %}?export=1{% endif %}"
+                   class="btn btn-outline text-sm">
+                    Esporta CSV
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- CARDS PARTNER - sempre visibile -->
+<div class="card">
+    <div class="card-header flex items-center justify-between">
+        <strong>Commissioni partner</strong>
+        <div class="flex items-center gap-3 text-xs">
+            <span class="text-slate-500">
+                Totale partner: {{ partners|length }}
+            </span>
+            
+            <a href="{% url 'backoffice:liquidated_commission_list' %}"
+               class="text-xs font-semibold text-emerald-600 hover:text-emerald-800">
+                Commissioni liquidate →
+            </a>
+
+            <a href="{% url 'backoffice:unliquidated_commission_list' %}"
+               class="text-xs font-semibold text-amber-600 hover:text-amber-800">
+                Commissioni non liquidate →
+            </a>
+
+            <a href="{% url 'backoffice:partner_payout_list' %}"
+               class="text-xs font-semibold text-indigo-600 hover:text-indigo-800">
+                Vai ai payout →
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        {% if show_results %}
+            {% if partners %}
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+
+                    {% for p in partners %}
+                    <div class="border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow bg-white flex flex-col justify-between">
+
+                        <!-- header card -->
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                                <div class="text-sm font-semibold text-slate-900">
+                                    {{ p.company_name }}
+                                </div>
+                                <div class="text-xs text-slate-500">
+                                    {{ p.user.email }}
+                                </div>
+                            </div>
+                            <div>
+                                {% if p.is_active %}
+                                    <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-700">
+                                        Attivo
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-slate-100 text-slate-500">
+                                        Disattivo
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- KPI -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-500">Commissione default</span>
+                                <span class="font-semibold text-slate-900">
+                                    {{ p.default_commission_percent|default:0|floatformat:2 }} %
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-500">Importo partner (maturato)</span>
+                                <span class="font-semibold text-indigo-700">
+                                    {{ p.partner_earnings|default:0|floatformat:2 }} €
+                                </span>
+                            </div>
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-500">Commissioni Portale</span>
+                                <span class="font-semibold text-amber-700">
+                                    {{ p.unliquidated_commissions|default:0|floatformat:2 }} €
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- azioni -->
+                        <div class="space-y-2">
+                            <form method="post"
+                                  action="{% url 'backoffice:partner_payout_create' p.id %}"
+                                  class="mt-1">
+                                {% csrf_token %}
+                                <!-- filtri da mantenere al ritorno -->
+                                <input type="hidden" name="company" value="{{ company }}">
+                                <input type="hidden" name="email" value="{{ email }}">
+                                <input type="hidden" name="active" value="{{ active }}">
+                                <input type="hidden" name="period_start" value="{{ period_start }}">
+                                <input type="hidden" name="period_end" value="{{ period_end }}">
+
+                                {% if period_start and period_end %}
+                                    <button type="submit"
+                                            class="btn btn-xs btn-primary w-full">
+                                        Crea payout per il periodo
+                                    </button>
+                                {% else %}
+                                    <button type="button"
+                                            class="btn btn-xs btn-outline w-full opacity-60 cursor-not-allowed"
+                                            disabled>
+                                        Crea payout per il periodo
+                                    </button>
+                                {% endif %}
+                            </form>
+
+                            <div class="flex items-center justify-end">
+                                <a href="{% url 'admin:partners_partnerprofile_change' p.id %}"
+                                   class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 js-admin-popup">
+                                    Modifica commissione
+                                </a>
+                            </div>
+                        </div>
+
+                    </div>
+                    {% endfor %}
+
+                </div>
+            {% else %}
+                <p class="text-sm text-slate-500 text-center py-6">
+                    Nessun partner trovato con i filtri selezionati.
+                </p>
+            {% endif %}
+        {% else %}
+            <p class="text-sm text-slate-500 text-center py-6">
+                Usa i filtri in alto per visualizzare le commissioni dei partner nel periodo desiderato.
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Totali -->
+<div class="mt-6 pt-4 border-t border-slate-200 flex flex-col items-end gap-1">
+    <div>
+        <span class="text-xs text-slate-500 mr-2">
+            Totale importi partner maturati:
+        </span>
+        <span class="text-sm font-semibold text-indigo-700">
+            {{ total_commissions|default:0|floatformat:2 }} €
+        </span>
+    </div>
+
+    <div>
+        <span class="text-xs text-slate-500 mr-2">
+            Totale commissioni portale:
+        </span>
+        <span class="text-sm font-semibold text-amber-700">
+            {{ total_to_liquidate|default:0|floatformat:2 }} €
+        </span>
+    </div>
+</div>
+
+{% if not period_start or not period_end %}
+<p class="mt-2 text-[11px] text-slate-500 text-right">
+    Per attivare <strong>"Crea payout per il periodo"</strong> devi prima selezionare un periodo
+    (campi <em>Periodo da</em> e <em>Periodo a</em> nei filtri in alto).
+</p>
+{% endif %}
+
+<div id="adminModal"
+     class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200">
+      <h2 class="text-sm font-semibold text-slate-700">
+        Modifica commissione partner
+      </h2>
+      <button id="adminModalClose"
+              class="text-slate-500 hover:text-slate-800 text-lg leading-none">
+        ✕
+      </button>
+    </div>
+    <iframe id="adminModalFrame"
+            src=""
+            class="flex-1 w-full border-0"></iframe>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var modal = document.getElementById('adminModal');
+  var iframe = document.getElementById('adminModalFrame');
+  var closeBtn = document.getElementById('adminModalClose');
+  var links = document.querySelectorAll('.js-admin-popup');
+
+  if (!modal || !iframe || !closeBtn || !links.length) {
+    return;
+  }
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      iframe.src = this.href;
+      modal.classList.remove('hidden');
+    });
+  });
+
+  closeBtn.addEventListener('click', function () {
+    modal.classList.add('hidden');
+    iframe.src = "";
+  });
+
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      iframe.src = "";
+    }
+  });
+});
+</script>
+
+{% endblock %}

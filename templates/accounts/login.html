@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Accesso{% endblock %}
+{% block page_title %}Accesso al portale{% endblock %}
+
+{% block content %}
+
+<div class="flex justify-center">
+    <div class="w-full max-w-md bg-white border border-slate-200 rounded-2xl p-6">
+
+        <h2 class="text-xl font-semibold text-slate-900 mb-4 text-center">
+            Accedi al Portale B2B
+        </h2>
+
+        <!-- Messaggi (credenziali non valide) -->
+        {% if form.errors %}
+            <div class="mb-4">
+                <div class="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">
+                    Le credenziali non sono corrette. Riprova.
+                </div>
+            </div>
+        {% endif %}
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+
+            {# Render dei campi con il partial riutilizzabile #}
+            {% for field in form %}
+                {% include "partials/form_field.html" with field=field %}
+            {% endfor %}
+
+            <button type="submit"
+                    class="w-full inline-flex justify-center items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                Accedi
+            </button>
+        </form>
+<div class="mt-4 text-center text-sm text-slate-600">
+    Non hai ancora un account?
+    <a href="{% url 'accounts:register' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+        Registrati
+    </a>
+</div>
+    </div>
+</div>
+
+{% endblock %}

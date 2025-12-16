@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if is_edit %}Modifica prodotto{% else %}Nuovo prodotto{% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if is_edit %}Modifica prodotto{% else %}Nuovo prodotto{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<div class="max-w-3xl mx-auto">
+
+    <!-- INTRO -->
+    <div class="mb-6">
+        {% if is_edit %}
+            <p class="text-slate-600 text-sm">
+                Stai modificando il prodotto:
+                <strong class="text-slate-900">{{ product.name }}</strong>
+            </p>
+        {% else %}
+            <p class="text-slate-600 text-sm">
+                Compila i campi per creare un nuovo prodotto nel tuo catalogo.
+            </p>
+        {% endif %}
+    </div>
+
+    <!-- CARD FORM -->
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <!-- Errori globali -->
+            {% if form.non_field_errors %}
+                <div class="mb-4 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-3">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <!-- Nome -->
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-600 mb-1">
+                    {{ form.name.label }}
+                </label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                    <p class="mt-1 text-xs text-rose-600">{{ form.name.errors|striptags }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Descrizione breve -->
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-600 mb-1">
+                    {{ form.short_description.label }}
+                </label>
+                {{ form.short_description }}
+                {% if form.short_description.errors %}
+                    <p class="mt-1 text-xs text-rose-600">{{ form.short_description.errors|striptags }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Descrizione completa -->
+            <div class="mb-4">
+                <label class="block text-xs font-medium text-slate-600 mb-1">
+                    {{ form.description.label }}
+                </label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <p class="mt-1 text-xs text-rose-600">{{ form.description.errors|striptags }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Categoria + Tipo -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">
+                        {{ form.category.label }}
+                    </label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                        <p class="mt-1 text-xs text-rose-600">{{ form.category.errors|striptags }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="flex items-center gap-2 mt-6 md:mt-7">
+                    {{ form.is_service }}
+                    <label class="text-xs font-medium text-slate-600">
+                        {{ form.is_service.label }}
+                    </label>
+                    {% if form.is_service.errors %}
+                        <p class="mt-1 text-xs text-rose-600">{{ form.is_service.errors|striptags }}</p>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- Prezzo + Unità -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">
+                        {{ form.base_price.label }}
+                    </label>
+                    {{ form.base_price }}
+                    {% if form.base_price.errors %}
+                        <p class="mt-1 text-xs text-rose-600">{{ form.base_price.errors|striptags }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-600 mb-1">
+                        {{ form.unit.label }}
+                    </label>
+                    {{ form.unit }}
+                    {% if form.unit.errors %}
+                        <p class="mt-1 text-xs text-rose-600">{{ form.unit.errors|striptags }}</p>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <!-- Attivo -->
+            <div class="mb-6 flex items-center gap-2">
+                {{ form.is_active }}
+                <label class="text-xs font-medium text-slate-600">
+                    {{ form.is_active.label }}
+                </label>
+                {% if form.is_active.errors %}
+                    <p class="mt-1 text-xs text-rose-600">{{ form.is_active.errors|striptags }}</p>
+                {% endif %}
+            </div>
+
+            <!-- AZIONI -->
+            <div class="flex justify-between items-center gap-3">
+                <a href="{% url 'partners:product_list' %}"
+                   class="inline-flex items-center rounded-xl border border-slate-300 text-slate-700 px-4 py-2 text-sm font-medium hover:bg-slate-50">
+                    Annulla
+                </a>
+
+                <button type="submit"
+                        class="inline-flex items-center rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+                    {% if is_edit %}Salva modifiche{% else %}Crea prodotto{% endif %}
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+{% endblock %}

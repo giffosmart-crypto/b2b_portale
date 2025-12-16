@@ -1,0 +1,273 @@
+{% extends "backoffice/base_admin.html" %}
+
+{% block page_title %}Dettaglio payout #{{ payout.id }}{% endblock %}
+
+{% block admin_content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+  <!-- Breadcrumb / intestazione -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-base font-semibold text-slate-900">
+        Dettaglio payout partner
+      </h1>
+      <p class="mt-1 text-xs text-slate-500">
+        Payout #{{ payout.id }} – {{ payout.partner.company_name }} – periodo
+        {{ payout.period_start }} → {{ payout.period_end }}
+      </p>
+    </div>
+
+    <div class="flex gap-2">
+      <!-- Torna alla lista payout -->
+      <a href="{% url 'backoffice:partner_payout_list' %}"
+         class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50">
+        Torna ai payout
+      </a>
+
+      <!-- Vai in admin (aperto in iframe modal) -->
+      <a href="{% url 'admin:orders_partnerpayout_change' payout.id %}"
+         class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 js-admin-popup">
+        Paga
+      </a>
+
+      <!-- Pulsante stampa / PDF -->
+      <a href="{% url 'backoffice:partner_payout_report' payout.id %}"
+         target="_blank"
+         class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50">
+        Stampa PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Riepilogo payout -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+        Partner
+      </h2>
+      <p class="text-sm font-medium text-slate-900">
+        {{ payout.partner.company_name }}
+      </p>
+      <p class="text-xs text-slate-500 mt-1">
+        {{ payout.partner.user.email }}
+      </p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+        Periodo
+      </h2>
+      <p class="text-sm text-slate-900">
+        Dal {{ payout.period_start }} al {{ payout.period_end }}
+      </p>
+      <p class="text-xs text-slate-500 mt-1">
+        Creato il {{ payout.created_at|date:"d/m/Y H:i" }}
+        {% if payout.paid_at %}
+          – Pagato il {{ payout.paid_at|date:"d/m/Y H:i" }}
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+        Totali
+      </h2>
+      <dl class="space-y-1 text-sm">
+        <div class="flex justify-between">
+          <dt class="text-slate-600">Totale righe</dt>
+          <dd class="font-medium">
+            € {{ total_row_amount|floatformat:2 }}
+          </dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-600">Commissione portale</dt>
+          <dd class="font-medium">
+            € {{ total_commission|floatformat:2 }}
+          </dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-slate-600">Totale liquidato partner</dt>
+          <dd class="font-semibold text-emerald-600">
+            € {{ total_partner_net|floatformat:2 }}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </div>
+
+  <!-- Sezione righe ordine -->
+  <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-900">
+        Righe incluse nel payout
+      </h2>
+      <p class="text-xs text-slate-500">
+        {{ items|length }} righe ordine
+      </p>
+    </div>
+
+    {% if items %}
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-slate-200 text-xs">
+          <thead class="bg-slate-50">
+            <tr>
+              <th scope="col" class="px-4 py-2 text-left font-semibold text-slate-600">
+                Cliente ordinante
+              </th>
+              <th scope="col" class="px-4 py-2 text-left font-semibold text-slate-600">
+                Ordine
+              </th>
+              <th scope="col" class="px-4 py-2 text-left font-semibold text-slate-600">
+                Prodotto
+              </th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold text-slate-600">
+                Quantità
+              </th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold text-slate-600">
+                Totale riga
+              </th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold text-slate-600">
+                Commissione portale
+              </th>
+              <th scope="col" class="px-4 py-2 text-right font-semibold text-slate-600">
+                Netto partner
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-slate-100">
+            {% for item in items %}
+              <tr>
+                <td class="px-4 py-2 align-top">
+                  <div class="font-medium text-slate-900">
+                    {{ item.order.client.get_full_name|default:item.order.client.email }}
+                  </div>
+                  <div class="text-[11px] text-slate-500">
+                    {{ item.order.client.email }}
+                  </div>
+                </td>
+                <td class="px-4 py-2 align-top">
+                  <div class="font-medium text-slate-900">
+                    #{{ item.order.id }} – {{ item.order.created_at|date:"d/m/Y" }}
+                  </div>
+                  <div class="text-[11px] text-slate-500">
+                    Stato: {{ item.order.get_status_display }}
+                  </div>
+                </td>
+                <td class="px-4 py-2 align-top">
+                  <div class="font-medium text-slate-900">
+                    {{ item.product.name }}
+                  </div>
+                  <div class="text-[11px] text-slate-500">
+                    ID riga: {{ item.id }}
+                  </div>
+                </td>
+                <td class="px-4 py-2 align-top text-right">
+                  {{ item.quantity }}
+                </td>
+                <td class="px-4 py-2 align-top text-right">
+                  € {{ item.total_price|floatformat:2 }}
+                </td>
+                <td class="px-4 py-2 align-top text-right">
+                  € {{ item.commission_amount|floatformat:2 }}
+                </td>
+                <td class="px-4 py-2 align-top text-right font-semibold text-emerald-600">
+                  € {{ item.partner_earnings|floatformat:2 }}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot class="bg-slate-50">
+            <tr>
+              <th colspan="4"
+                  class="px-4 py-3 text-right text-xs font-semibold text-slate-700">
+                Totali
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-900">
+                € {{ total_row_amount|floatformat:2 }}
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-900">
+                € {{ total_commission|floatformat:2 }}
+              </th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-emerald-600">
+                € {{ total_partner_net|floatformat:2 }}
+              </th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    {% else %}
+      <div class="px-4 py-6 text-center text-sm text-slate-500">
+        Nessuna riga ordine trovata per questo payout nel periodo selezionato.
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{# MODAL ADMIN DJANGO (stesso di partner_payout_list) #}
+<div id="adminModal"
+     class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200">
+      <h2 class="text-sm font-semibold text-slate-700">
+        Dettaglio payout (admin)
+      </h2>
+      <button id="adminModalClose"
+              class="text-slate-500 hover:text-slate-800 text-lg leading-none">
+        ✕
+      </button>
+    </div>
+    <iframe id="adminModalFrame"
+            src=""
+            class="flex-1 w-full border-0"></iframe>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const links = document.querySelectorAll('.js-admin-popup');
+  const modal = document.getElementById('adminModal');
+  const iframe = document.getElementById('adminModalFrame');
+  const closeBtn = document.getElementById('adminModalClose');
+
+  if (!modal || !iframe || !closeBtn) return;
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      iframe.src = this.href;
+      modal.classList.remove('hidden');
+    });
+  });
+
+  closeBtn.addEventListener('click', function () {
+    modal.classList.add('hidden');
+    iframe.src = "";
+  });
+
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      iframe.src = "";
+    }
+  });
+});
+</script>
+
+<!-- Stili base per la stampa -->
+<style>
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  .print\\:hidden {
+    display: none !important;
+  }
+  a {
+    text-decoration: none;
+    color: #000000;
+  }
+}
+</style>
+
+{% endblock %}

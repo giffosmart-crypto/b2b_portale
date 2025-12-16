@@ -1,0 +1,86 @@
+
+{% extends "backoffice/base_admin.html" %}
+
+{% block content %}
+<h1>Dettaglio recensione #{{ review.id }}</h1>
+
+<div class="mb-3">
+  <a href="{% url 'backoffice:review_list' %}" class="btn btn-secondary btn-sm">&larr; Torna all'elenco</a>
+
+  {% if review.moderation_status != "approved" %}
+    <a href="{% url 'backoffice:review_approve' review.id %}" class="btn btn-success btn-sm">Approva</a>
+  {% endif %}
+  {% if review.moderation_status != "rejected" %}
+    <a href="{% url 'backoffice:review_reject' review.id %}" class="btn btn-warning btn-sm">Rifiuta</a>
+  {% endif %}
+</div>
+
+<table class="table table-bordered table-sm">
+  <tr>
+    <th>ID</th>
+    <td>{{ review.id }}</td>
+  </tr>
+  <tr>
+    <th>Data</th>
+    <td>{{ review.created_at|date:"d/m/Y H:i" }}</td>
+  </tr>
+  <tr>
+    <th>Prodotto</th>
+    <td>{{ review.product.name }}</td>
+  </tr>
+  <tr>
+    <th>Partner</th>
+    <td>
+  {% if review.product.supplier %}
+    {{ review.product.supplier.company_name }}
+  {% else %}
+    -
+  {% endif %}
+</td>
+  </tr>
+  <tr>
+    <th>Cliente</th>
+    <td>{{ review.user.email }}</td>
+  </tr>
+  <tr>
+    <th>Rating</th>
+    <td>{{ review.rating }}</td>
+  </tr>
+  <tr>
+  <th>Moderata da</th>
+  <td>
+    {% if review.moderated_by %}
+      {{ review.moderated_by.get_full_name|default:review.moderated_by.email }}
+    {% else %}
+      -
+    {% endif %}
+  </td>
+</tr>
+<tr>
+  <th>Data moderazione</th>
+  <td>
+    {% if review.moderated_at %}
+      {{ review.moderated_at|date:"d/m/Y H:i" }}
+    {% else %}
+      -
+    {% endif %}
+  </td>
+</tr>
+  <tr>
+  <th>Stato</th>
+  <td>
+    {% if review.moderation_status == "approved" %}
+      <span class="badge bg-success">Approvata</span>
+    {% elif review.moderation_status == "rejected" %}
+      <span class="badge bg-danger">Rifiutata</span>
+    {% else %}
+      <span class="badge bg-secondary">In attesa</span>
+    {% endif %}
+  </td>
+</tr>
+  <tr>
+    <th>Commento</th>
+    <td style="white-space: pre-wrap;">{{ review.comment }}</td>
+  </tr>
+</table>
+{% endblock %}

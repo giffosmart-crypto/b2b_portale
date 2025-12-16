@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}I miei ordini{% endblock %}
+{% block page_title %}I miei ordini{% endblock %}
+
+{% block content %}
+
+<!-- INTRO -->
+<div class="mb-6">
+    <p class="text-sm text-slate-600">
+        Ciao
+        <strong class="text-slate-900">{{ request.user.first_name|default:request.user.username }}</strong>,
+        qui trovi il riepilogo dei tuoi ordini.
+    </p>
+</div>
+
+<!-- KPI -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+
+    {% include "partials/kpi_card.html" with title="Ordini totali" value=total_orders color="slate" %}
+
+    {% include "partials/kpi_card.html" with title="In corso" value=open_orders color="blue" %}
+
+    {% include "partials/kpi_card.html" with title="Completati" value=completed_orders color="emerald" %}
+
+    {% include "partials/kpi_card.html" with title="Annullati" value=cancelled_orders color="rose" %}
+
+</div>
+
+<!-- ACTION BUTTONS -->
+<div class="flex flex-wrap items-center gap-3 mb-8">
+
+    <a href="{% url 'catalog:product_list' %}"
+       class="inline-flex items-center rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+        Vai al catalogo
+    </a>
+
+    <a href="{% url 'accounts:my_structures_list' %}"
+       class="inline-flex items-center rounded-xl bg-slate-600 text-white px-4 py-2 text-sm font-medium hover:bg-slate-700">
+        Le mie strutture
+    </a>
+
+</div>
+
+<!-- ULTIMI ORDINI -->
+<h2 class="text-lg font-semibold text-slate-900 mb-3">Ultimi ordini</h2>
+
+{% if recent_orders %}
+    <div class="overflow-x-auto mb-10">
+        <table class="min-w-full bg-white border border-slate-200 rounded-xl text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">ID</th>
+                    <th class="px-3 py-2 text-left">Struttura</th>
+                    <th class="px-3 py-2 text-left">Stato</th>
+                    <th class="px-3 py-2 text-left">Totale</th>
+                    <th class="px-3 py-2 text-left">Data</th>
+                    <th class="px-3 py-2 text-left">Dettaglio</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for order in recent_orders %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-3 py-2 font-medium text-slate-900">#{{ order.id }}</td>
+                        <td class="px-3 py-2">{{ order.structure }}</td>
+                        <td class="px-3 py-2">
+                            {% include "partials/order_status_badge.html" with status=order.status label=order.get_status_display %}
+                        </td>
+                        <td class="px-3 py-2 font-medium text-slate-900">{{ order.total }} €</td>
+                        <td class="px-3 py-2 text-slate-500">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-3 py-2">
+                            <a href="{% url 'accounts:my_order_detail' order.id %}"
+                               class="text-blue-600 hover:text-blue-800 font-medium">
+                                Vedi
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p class="text-slate-500 mb-10">Non hai ancora effettuato ordini.</p>
+{% endif %}
+
+<!-- TUTTI GLI ORDINI -->
+<h2 class="text-lg font-semibold text-slate-900 mb-3">Tutti i miei ordini</h2>
+
+{% if orders %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-slate-200 rounded-xl text-sm">
+            <thead class="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                    <th class="px-3 py-2 text-left">ID</th>
+                    <th class="px-3 py-2 text-left">Data</th>
+                    <th class="px-3 py-2 text-left">Struttura</th>
+                    <th class="px-3 py-2 text-left">Stato</th>
+                    <th class="px-3 py-2 text-left">Totale</th>
+                    <th class="px-3 py-2 text-left">Azioni</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for order in orders %}
+                    <tr class="hover:bg-slate-50">
+                        <td class="px-3 py-2 font-medium text-slate-900">#{{ order.id }}</td>
+                        <td class="px-3 py-2 text-slate-500">{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="px-3 py-2">{{ order.structure }}</td>
+                        <td class="px-3 py-2">
+                            {% include "partials/order_status_badge.html" with status=order.status label=order.get_status_display %}
+                        </td>
+                        <td class="px-3 py-2 font-medium text-slate-900">{{ order.total }} €</td>
+                        <td class="px-3 py-2">
+                            <a href="{% url 'accounts:my_order_detail' order.id %}"
+                               class="text-blue-600 hover:text-blue-800 font-medium">
+                                Dettaglio
+                            </a>
+                            |
+                            <a href="{% url 'accounts:my_order_duplicate' order.id %}"
+                               class="text-slate-500 hover:text-slate-700">
+                                Duplica
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+{% else %}
+    <p class="text-slate-500">Non ci sono ordini.</p>
+{% endif %}
+
+{% endblock %}
