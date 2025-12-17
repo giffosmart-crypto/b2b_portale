@@ -177,6 +177,7 @@ def order_list(request):
     status = request.GET.get("status")
     client_email = request.GET.get("client")
     partner_id = request.GET.get("partner")
+    structure_id = request.GET.get("structure")
     date_from = request.GET.get("date_from")
     date_to = request.GET.get("date_to")
 
@@ -188,6 +189,9 @@ def order_list(request):
 
     if partner_id:
         qs = qs.filter(items__partner__id=partner_id).distinct()
+        
+    if structure_id:
+        qs = qs.filter(structure_id=structure_id)
 
     if date_from:
         qs = qs.filter(created_at__date__gte=date_from)
@@ -616,7 +620,8 @@ def partner_commission_list(request):
             qs = qs.filter(is_active=False)
 
         # filtro periodo DA APPLICARE dentro le SUM
-        period_filter = Q()
+        # NB: le commissioni "maturano" solo su righe COMPLETED con commission_amount > 0.
+        period_filter = Q(order_items__partner_status=OrderItem.PARTNER_STATUS_COMPLETED, order_items__commission_amount__gt=0)
         if start_date:
             period_filter &= Q(order_items__order__created_at__date__gte=start_date)
         if end_date:
@@ -648,7 +653,7 @@ def partner_commission_list(request):
                 partner_earnings=Coalesce(
                     Sum(
                         "order_items__partner_earnings",
-                        filter=period_filter & Q(order_items__is_liquidated=False),
+                        filter=period_filter & Q(order_items__is_liquidated=False, order_items__payout__isnull=True),
                     ),
                     Value(Decimal("0.00")),
                     output_field=DecimalField(max_digits=12, decimal_places=2),
@@ -659,7 +664,7 @@ def partner_commission_list(request):
                 unliquidated_commissions=Coalesce(
                     Sum(
                         "order_items__commission_amount",
-                        filter=period_filter & Q(order_items__is_liquidated=False),
+                        filter=period_filter & Q(order_items__is_liquidated=False, order_items__payout__isnull=True),
                     ),
                     Value(Decimal("0.00")),
                     output_field=DecimalField(max_digits=12, decimal_places=2),
@@ -1989,7 +1994,8 @@ def partner_payout_create(request, partner_id):
     - Se NON esiste un payout in BOZZA (magari ce ne sono di già pagati) -> crea un
       nuovo payout in stato BOZZA solo con le nuove righe.
 
-    In tutti i casi, le righe usate vengono marcate come is_liquidated=True.
+    In tutti i casi, le righe vengono associate al payout (campo OrderItem.payout).
+    La liquidazione (is_liquidated=True) avviene SOLO quando il payout passa a "Pagato".
     """
 
     partner = get_object_or_404(PartnerProfile, id=partner_id)
@@ -2035,6 +2041,7 @@ def partner_payout_create(request, partner_id):
         order__created_at__date__gte=start_date,
         order__created_at__date__lte=end_date,
         is_liquidated=False,
+        payout__isnull=True,  # evita doppio inserimento in payout già creati (bozze incluse)
     )
 
     if not items_qs.exists():
@@ -2130,8 +2137,8 @@ def partner_payout_create(request, partner_id):
                 f"({start_date} → {end_date}) per {new_partner_earnings:.2f} € (importo partner).",
             )
 
-    # Le righe appena usate in questo payout diventano liquidate
-    items_qs.update(is_liquidated=True, payout=payout)
+    # Le righe vengono associate al payout (la liquidazione avviene SOLO a payout=Pagato)
+    items_qs.update(payout=payout)
 
     return HttpResponseRedirect(redirect_url)
     
@@ -2249,7 +2256,9 @@ def unliquidated_commission_list(request):
         .select_related("order", "product", "partner", "partner__user")
         .filter(
             commission_amount__gt=0,
+            partner_status=OrderItem.PARTNER_STATUS_COMPLETED,
             is_liquidated=False,
+            payout__isnull=True,
         )
     )
 

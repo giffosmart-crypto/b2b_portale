@@ -69,11 +69,6 @@
                 <tr>
                     <th>Cliente</th>
                     <th>Struttura</th>
-                    <th>Indirizzo</th>
-                    <th>Comune</th>
-                    <th>Nazione</th>
-                    <th>CAP</th>
-                    <th>Telefono</th>
                     <th class="text-right">Azioni</th>
                 </tr>
             </thead>
@@ -87,21 +82,6 @@
                     <td class="text-sm font-medium text-slate-900">
                         {{ s.name }}
                     </td>
-                    <td class="text-sm">
-                        {{ s.address }}
-                    </td>
-                    <td class="text-sm">
-                        {{ s.city }}
-                    </td>
-                    <td class="text-sm">
-                        {{ s.country }}
-                    </td>
-                    <td class="text-sm">
-                        {{ s.zip_code }}
-                    </td>
-                    <td class="text-sm">
-                        {{ s.phone }}
-                    </td>
                     <td class="text-right">
                         <a href="{% url 'backoffice:client_structure_detail' s.id %}"
                            class="btn btn-sm btn-secondary">
@@ -111,7 +91,12 @@
                            class="btn btn-sm btn-primary js-admin-popup">
                             Modifica
                         </a>
+                        <a href="{% url 'backoffice:order_list' %}?structure={{ s.id }}"
+                           class="btn btn-sm btn-primary">
+                            Ordini
+                        </a>
                     </td>
+
                 </tr>
             {% empty %}
                 <tr>

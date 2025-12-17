@@ -19,6 +19,7 @@
           <th>Partita IVA</th>
           <th>Commissione (%)</th>
           <th>Stato</th>
+          <th class="text-right">Azioni</th>
           <th></th>
         </tr>
       </thead>
@@ -47,6 +48,12 @@
               Ordini
             </a>
           </td>
+          <td class="text-right">
+                        <a href="{% url 'admin:partners_partnerprofile_change' p.id %}"
+                           class="btn btn-sm btn-primary js-admin-popup">
+                            Modifica
+                        </a>
+                    </td>
         </tr>
         {% empty %}
         <tr>
@@ -57,5 +64,46 @@
     </table>
   </div>
 </div>
+{# MODAL ADMIN DJANGO #}
+<div id="adminModal"
+     class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200">
+      <h2 class="text-sm font-semibold text-slate-700">Modifica utente</h2>
+      <button id="adminModalClose" class="text-slate-500 hover:text-slate-800 text-lg leading-none">✕</button>
+    </div>
+    <iframe id="adminModalFrame" src="" class="flex-1 w-full border-0"></iframe>
+  </div>
+</div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const links = document.querySelectorAll('.js-admin-popup');
+  const modal = document.getElementById('adminModal');
+  const iframe = document.getElementById('adminModalFrame');
+  const closeBtn = document.getElementById('adminModalClose');
+
+  if (!modal || !iframe || !closeBtn) return;
+
+  links.forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      iframe.src = this.href;
+      modal.classList.remove('hidden');
+    });
+  });
+
+  closeBtn.addEventListener('click', function () {
+    modal.classList.add('hidden');
+    iframe.src = "";
+  });
+
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      iframe.src = "";
+    }
+  });
+});
+</script>
 {% endblock %}

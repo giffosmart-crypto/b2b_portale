@@ -15,40 +15,68 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
 
     <div class="card">
-        <div class="card-header">
-            <strong>Dati struttura</strong>
-        </div>
-        <div class="card-body text-sm space-y-2">
-            <p>
-                <span class="font-semibold text-slate-600">Cliente:</span><br>
-                {{ structure.owner.email }}
-            </p>
-            <p>
-                <span class="font-semibold text-slate-600">Nome struttura:</span><br>
-                {{ structure.name }}
-            </p>
-            <p>
-                <span class="font-semibold text-slate-600">Indirizzo:</span><br>
-                {{ structure.address }}
-            </p>
-            <p>
-                <span class="font-semibold text-slate-600">Comune:</span><br>
-                {{ structure.city }}
-            </p>
-            <p>
-                <span class="font-semibold text-slate-600">Nazione:</span><br>
-                {{ structure.country }}
-            </p>
-            <p>
-                <span class="font-semibold text-slate-600">CAP:</span><br>
-                {{ structure.zip_code }}
-            </p>
-            <p>
-                <span class="font-semibold text-slate-600">Telefono:</span><br>
-                {{ structure.phone }}
-            </p>
-        </div>
+  <div class="card-header">
+    <div>
+      <div class="text-sm font-semibold text-slate-900">Dati struttura</div>
+      <div class="text-xs text-slate-500">Anagrafica e contatti</div>
     </div>
+  </div>
+
+  <div class="card-body">
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+
+      <div>
+        <dt class="text-[11px] uppercase tracking-wide text-slate-500">Cliente</dt>
+        <dd class="mt-1 text-sm font-medium text-slate-900 break-words">
+          {{ structure.owner.email }}
+        </dd>
+      </div>
+
+      <div>
+        <dt class="text-[11px] uppercase tracking-wide text-slate-500">Nome struttura</dt>
+        <dd class="mt-1 text-sm font-medium text-slate-900">
+          {{ structure.name }}
+        </dd>
+      </div>
+
+      <div>
+        <dt class="text-[11px] uppercase tracking-wide text-slate-500">Indirizzo</dt>
+        <dd class="mt-1 text-sm font-medium text-slate-900 break-words">
+          {{ structure.address }}
+        </dd>
+      </div>
+
+      <div>
+        <dt class="text-[11px] uppercase tracking-wide text-slate-500">Comune</dt>
+        <dd class="mt-1 text-sm font-medium text-slate-900">
+          {{ structure.city }}
+        </dd>
+      </div>
+
+      <div>
+        <dt class="text-[11px] uppercase tracking-wide text-slate-500">Nazione</dt>
+        <dd class="mt-1 text-sm font-medium text-slate-900">
+          {{ structure.country }}
+        </dd>
+      </div>
+
+      <div>
+        <dt class="text-[11px] uppercase tracking-wide text-slate-500">CAP</dt>
+        <dd class="mt-1 text-sm font-medium text-slate-900">
+          {{ structure.zip_code }}
+        </dd>
+      </div>
+
+      <div class="sm:col-span-2">
+        <dt class="text-[11px] uppercase tracking-wide text-slate-500">Telefono</dt>
+        <dd class="mt-1 text-sm font-medium text-slate-900">
+          {{ structure.phone|default:"—" }}
+        </dd>
+      </div>
+
+    </dl>
+  </div>
+</div>
 
     <div class="card">
         <div class="card-header">

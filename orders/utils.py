@@ -11,7 +11,7 @@ def get_commission_rate_for_item(partner: PartnerProfile, product: Product) -> D
 
     1) product.partner_commission_rate (se valorizzato)
     2) PartnerCategoryCommission(partner, product.category)
-    3) partner.default_commission_rate
+    3) partner.default_commission_percent
     """
 
     # 1) Commissione specifica prodotto
@@ -30,8 +30,8 @@ def get_commission_rate_for_item(partner: PartnerProfile, product: Product) -> D
         except PartnerCategoryCommission.DoesNotExist:
             pass
 
-    # 3) Fallback: default partner
-    default_rate = getattr(partner, "default_commission_rate", None)
+    # 3) Fallback: default partner (campo reale su PartnerProfile)
+    default_rate = getattr(partner, "default_commission_percent", None)
     if default_rate is not None:
         return default_rate
 

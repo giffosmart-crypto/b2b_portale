@@ -104,6 +104,7 @@ class OrdersViewsTests(TestCase):
             "payment_method": Order.PAYMENT_BANK_TRANSFER,
         }
         resp = self.client.post(url, data)
+        
         # redirect su dettaglio ordine
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(Order.objects.count(), 1)

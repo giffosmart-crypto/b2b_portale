@@ -140,11 +140,7 @@ def checkout(request):
 
             # Svuota il carrello e mostra conferma
             cart.clear()
-            return render(
-                request,
-                "orders/order_confirmation.html",
-                {"order": order},
-            )
+            return redirect("orders:order_confirmation", order_id=order.id)
     else:
         # form non bound, ma con l'utente passato correttamente
         form = CheckoutForm(user=request.user)
@@ -157,6 +153,12 @@ def checkout(request):
             "form": form,
         },
     )
+
+
+@login_required
+def order_confirmation(request, order_id: int):
+    order = get_object_or_404(Order, id=order_id, client=request.user)
+    return render(request, "orders/order_confirmation.html", {"order": order})
 
 
 @login_required

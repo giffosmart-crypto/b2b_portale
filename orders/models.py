@@ -422,23 +422,48 @@ class PartnerPayout(models.Model):
         )
 
     def liquidate_items(self):
-        """
-        Marca come liquidate tutte le OrderItem del partner
-        nel periodo di questo payout.
-        """
-        from .models import OrderItem  # lasciamo il tuo import locale
+        """Marca come liquidate le righe d'ordine incluse in questo payout.
 
-        items = OrderItem.objects.filter(
+        Regola principale: si liquidano **solo** le righe collegate a questo payout
+        (OrderItem.payout = self), con commissione > 0 e non ancora liquidate.
+
+        Fallback sicuro: se non risultano righe collegate (payout legacy creati prima
+        dell'associazione), proviamo ad agganciare e liquidare le righe del periodo
+        **solo** se non sono già associate ad altri payout (payout__isnull=True).
+        """
+        # NOTA: OrderItem è definito nello stesso modulo.
+        completed_value = getattr(OrderItem, 'PARTNER_STATUS_COMPLETED', 'completed')
+
+        qs = OrderItem.objects.filter(
+            payout=self,
+            commission_amount__gt=0,
+            partner_status=completed_value,
+            is_liquidated=False,
+        )
+
+        if qs.exists():
+            count = qs.count()
+            qs.update(is_liquidated=True)
+            return count
+
+        # --- Fallback legacy (safe): aggancia e liquida SOLO righe non ancora associate a payout ---
+        legacy_qs = OrderItem.objects.filter(
             partner=self.partner,
             order__created_at__date__gte=self.period_start,
             order__created_at__date__lte=self.period_end,
             commission_amount__gt=0,
+            partner_status=completed_value,
             is_liquidated=False,
+            payout__isnull=True,
         )
 
-        count = items.count()
-        items.update(is_liquidated=True)
+        if not legacy_qs.exists():
+            return 0
+
+        count = legacy_qs.count()
+        legacy_qs.update(payout=self, is_liquidated=True)
         return count
+
 
     def save(self, *args, **kwargs):
         """

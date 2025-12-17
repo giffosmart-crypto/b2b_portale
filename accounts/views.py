@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
 from django.contrib import messages
+from decimal import Decimal
 
 from .models import ClientStructure, User
 from .forms import (
@@ -208,28 +209,96 @@ def my_order_duplicate(request, order_id):
 
     order = get_object_or_404(Order, id=order_id, client=request.user)
 
-    # crea una bozza di nuovo ordine con gli stessi dati base
+    # ⚠️ Il runbook richiede che la duplicazione riparta "pulita":
+    # - nuovo ordine in DRAFT
+    # - righe con partner_status=pending
+    # - importi ricalcolati dai prezzi correnti del catalogo
+    # (così evitiamo incoerenze se i prezzi cambiano nel tempo).
+
+    # crea una bozza di nuovo ordine con gli stessi dati base (ma totali a 0: li ricalcoliamo)
     new_order = Order.objects.create(
         client=order.client,
         structure=order.structure,
         status=Order.STATUS_DRAFT,
         payment_method=order.payment_method,
-        subtotal=order.subtotal,
-        shipping_cost=order.shipping_cost,
-        total=order.total,
+        subtotal=Decimal("0.00"),
+        shipping_cost=Decimal("0.00"),
+        total=Decimal("0.00"),
         notes=f"Duplicato dall'ordine #{order.id}",
     )
 
-    for item in order.items.all():
-        OrderItem.objects.create(
+    subtotal = Decimal("0.00")
+    created_items = 0
+
+    for old_item in order.items.select_related("product").all():
+        product = old_item.product
+
+        # Se un prodotto è stato disattivato, non lo duplichiamo (evita ordini "impossibili")
+        if hasattr(product, "is_active") and not product.is_active:
+            messages.warning(
+                request,
+                f"Il prodotto '{product.name}' non è più disponibile e non è stato duplicato.",
+            )
+            continue
+
+        unit_price = (getattr(product, "base_price", None) or Decimal("0.00")).quantize(Decimal("0.01"))
+        qty = int(old_item.quantity or 0)
+        if qty <= 0:
+            continue
+
+        total_price = (unit_price * Decimal(qty)).quantize(Decimal("0.01"))
+
+        new_item = OrderItem.objects.create(
             order=new_order,
-            product=item.product,
-            partner=item.partner,
-            quantity=item.quantity,
-            unit_price=item.unit_price,
-            total_price=item.total_price,
-            partner_status=item.partner_status,
+            product=product,
+            partner=getattr(product, "supplier", None),
+            quantity=qty,
+            unit_price=unit_price,
+            total_price=total_price,
+            partner_status=OrderItem.PARTNER_STATUS_PENDING,
         )
+
+        # Calcolo commissioni coerente con la logica corrente
+        try:
+            new_item.calculate_commission()
+            new_item.save(update_fields=["commission_rate", "commission_amount", "partner_earnings"])
+        except Exception:
+            # Non blocchiamo la duplicazione se la commissione non è calcolabile (es. dati incompleti)
+            pass
+
+        subtotal += total_price
+        created_items += 1
+
+    # Se non abbiamo duplicato nulla, annulliamo la bozza e torniamo indietro
+    if created_items == 0:
+        new_order.delete()
+        messages.error(
+            request,
+            "Impossibile duplicare l'ordine: nessun prodotto duplicabile (prodotti non disponibili o quantità non valide).",
+        )
+        return redirect("accounts:my_order_detail", order_id=order.id)
+
+    # Shipping e totale: riusiamo calculate_shipping() senza toccare la sessione carrello.
+    try:
+        from orders.shipping import calculate_shipping
+
+        class _DummyCart:
+            def __init__(self, total):
+                self._total = total
+
+            def get_total_price(self):
+                return self._total
+
+        shipping_cost = calculate_shipping(_DummyCart(subtotal), new_order.structure)
+    except Exception:
+        shipping_cost = Decimal("0.00")
+
+    total = (subtotal + (shipping_cost or Decimal("0.00"))).quantize(Decimal("0.01"))
+
+    new_order.subtotal = subtotal.quantize(Decimal("0.01"))
+    new_order.shipping_cost = (shipping_cost or Decimal("0.00")).quantize(Decimal("0.01"))
+    new_order.total = total
+    new_order.save(update_fields=["subtotal", "shipping_cost", "total"])
 
     return redirect("accounts:my_order_detail", order_id=new_order.id)
 
