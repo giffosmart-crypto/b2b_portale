@@ -88,9 +88,9 @@
     </option>
   {% endfor %}
 </select>
-          {% if has_paid_payout %}
+          {% if has_accounting_lock %}
   <div class="form-text text-warning">
-    ⚠️ Stato ordine parzialmente bloccato: esiste almeno un payout pagato per questo ordine.
+    ⚠️ Stato ordine parzialmente bloccato: esiste almeno un payout emesso per questo ordine.
     Sono consentiti solo avanzamenti di stato, non retrocessioni/annullamento.
   </div>
 {% endif %}

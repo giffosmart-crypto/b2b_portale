@@ -226,22 +226,27 @@ def order_detail(request, order_id):
 
     items = (
         OrderItem.objects
-        .select_related("product", "partner")
+        .select_related("product", "partner", "payout")
         .filter(order=order)
     )
 
-    # ✅ LOCK: se esiste almeno una riga liquidata o legata a payout PAID
+    # 🔒 LOCK contabile:
+    # - se esiste QUALSIASI payout emesso su almeno una riga (anche Bozza/Confermato),
+    #   blocchiamo downgrade/cancellazione dello stato ordine;
+    # - se payout è PAID oppure riga liquidata, è comunque lock (caso più "hard").
+    has_any_payout = items.filter(payout__isnull=False).exists()
     has_paid_payout = (
         items.filter(is_liquidated=True).exists()
         or items.filter(payout__status=PartnerPayout.STATUS_PAID).exists()
     )
+    has_accounting_lock = has_any_payout or has_paid_payout
 
-    # ranking stati
+    # ranking stati (ordine definito da STATUS_CHOICES)
     status_rank = {code: idx for idx, (code, _) in enumerate(Order.STATUS_CHOICES)}
 
-    # stati disabilitati lato UI
+    # stati disabilitati lato UI: se esiste payout (anche bozza), niente retrocessioni
     disabled_statuses = set()
-    if has_paid_payout:
+    if has_any_payout:
         cur = order.status
 
         if hasattr(Order, "STATUS_CANCELLED"):
@@ -264,13 +269,13 @@ def order_detail(request, order_id):
         order.admin_notes = admin_notes
 
         if new_status in valid_statuses:
-            # 🔒 HARD LOCK: blocca downgrade / cancel dopo payout
-            if has_paid_payout and new_status != order.status:
+            # 🔒 LOCK: blocca downgrade / cancel se esiste payout emesso (anche bozza)
+            if has_any_payout and new_status != order.status:
 
                 if hasattr(Order, "STATUS_CANCELLED") and new_status == Order.STATUS_CANCELLED:
                     messages.error(
                         request,
-                        "Operazione non consentita: esiste già un payout pagato per questo ordine."
+                        "Operazione non consentita: esiste già un payout emesso per questo ordine (anche in bozza)."
                     )
                     return redirect("backoffice:order_detail", order_id=order.id)
 
@@ -281,7 +286,7 @@ def order_detail(request, order_id):
                 ):
                     messages.error(
                         request,
-                        "Operazione non consentita: non puoi retrocedere lo stato dopo il payout."
+                        "Operazione non consentita: non puoi retrocedere lo stato dopo l’emissione di un payout (anche in bozza)."
                     )
                     return redirect("backoffice:order_detail", order_id=order.id)
 
@@ -294,7 +299,9 @@ def order_detail(request, order_id):
     context = {
         "order": order,
         "items": items,
+        "has_any_payout": has_any_payout,
         "has_paid_payout": has_paid_payout,
+        "has_accounting_lock": has_accounting_lock,
         "disabled_statuses": disabled_statuses,
     }
 
