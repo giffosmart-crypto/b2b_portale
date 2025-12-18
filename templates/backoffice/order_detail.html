@@ -7,42 +7,62 @@
 <h1 class="mb-4">Dettaglio ordine #{{ order.id }}</h1>
 
 <!-- INFO GENERALI ORDINE -->
-<div class="card mb-4">
-  <div class="card-header">
-    <strong>Informazioni ordine</strong>
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6">
+  <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+    <div>
+      <h2 class="text-sm font-semibold text-slate-900">Informazioni ordine</h2>
+      <p class="text-xs text-slate-500 mt-0.5">Riepilogo cliente, struttura e stato.</p>
+    </div>
+    <span class="text-xs font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+      #{{ order.id }}
+    </span>
   </div>
-  <div class="card-body">
 
-    <div class="row mb-2">
-      <div class="col-md-4">
-        <strong>Cliente:</strong><br>
-        {{ order.client.email }}
-      </div>
-      <div class="col-md-4">
-        <strong>Struttura:</strong><br>
-        {% if order.structure %}
-          {{ order.structure.name }}
-        {% else %}
-          -
-        {% endif %}
-      </div>
-      <div class="col-md-4">
-        <strong>Data creazione:</strong><br>
-        {{ order.created_at|date:"d/m/Y H:i" }}
+  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+    <div>
+      <div class="text-xs font-semibold text-slate-500">Cliente</div>
+      <div class="text-slate-900">{{ order.client.email }}</div>
+    </div>
+
+    <div>
+      <div class="text-xs font-semibold text-slate-500">Struttura</div>
+      <div class="text-slate-900">
+        {% if order.structure %}{{ order.structure.name }}{% else %}-{% endif %}
       </div>
     </div>
 
-    <div class="row mb-2">
-      <div class="col-md-4">
-        <strong>Totale:</strong><br>
-        {{ order.total }} €
-      </div>
-      <div class="col-md-4">
-        <strong>Stato attuale:</strong><br>
-        {{ order.status }}
-      </div>
+    <div>
+      <div class="text-xs font-semibold text-slate-500">Data creazione</div>
+      <div class="text-slate-900">{{ order.created_at|date:"d/m/Y H:i" }}</div>
     </div>
 
+    <div>
+      <div class="text-xs font-semibold text-slate-500">Totale</div>
+      <div class="text-slate-900 font-semibold">{{ order.total }} €</div>
+    </div>
+
+    <div>
+      <div class="text-xs font-semibold text-slate-500">Stato attuale</div>
+      <div class="text-slate-900">
+      {% if order.status == 'completed' %}
+  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+    {{ order.get_status_display }}
+  </span>
+{% elif order.status == 'paid' %}
+  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+    {{ order.get_status_display }}
+  </span>
+{% elif order.status == 'pending' %}
+  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+    {{ order.get_status_display }}
+  </span>
+{% else %}
+  <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+    {{ order.get_status_display }}
+  </span>
+{% endif %}
+      </div>
+    </div>
   </div>
 </div>
 
@@ -58,13 +78,22 @@
       <div class="row mb-3">
         <div class="col-md-4">
           <label class="form-label">Stato ordine</label>
-          <select name="status" class="form-select">
-            {% for value, label in order.STATUS_CHOICES %}
-              <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>
-                {{ label }}
-              </option>
-            {% endfor %}
-          </select>
+<select name="status" class="form-select">
+  {% for value, label in order.STATUS_CHOICES %}
+    <option value="{{ value }}"
+      {% if value in disabled_statuses %}disabled{% endif %}
+      {% if order.status == value %}selected{% endif %}
+    >
+      {{ label }}
+    </option>
+  {% endfor %}
+</select>
+          {% if has_paid_payout %}
+  <div class="form-text text-warning">
+    ⚠️ Stato ordine parzialmente bloccato: esiste almeno un payout pagato per questo ordine.
+    Sono consentiti solo avanzamenti di stato, non retrocessioni/annullamento.
+  </div>
+{% endif %}
         </div>
       </div>
 
@@ -112,8 +141,20 @@
           <td class="text-end">{{ item.unit_price }}</td>
           <td class="text-end">{{ item.total_price }}</td>
           <td>
-            {{ item.status }}
-          </td>
+  {% if item.partner_status == 'completed' %}
+    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+      {{ item.get_partner_status_display }}
+    </span>
+  {% elif item.partner_status == 'pending' %}
+    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+      {{ item.get_partner_status_display }}
+    </span>
+  {% else %}
+    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+      {{ item.get_partner_status_display }}
+    </span>
+  {% endif %}
+</td>
         </tr>
         {% empty %}
         <tr>

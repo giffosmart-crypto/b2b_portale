@@ -17,6 +17,7 @@ from decimal import Decimal
 
 from .models import PartnerProfile, PartnerNotification
 from orders.models import Order, OrderItem, OrderItemStatusLog, OrderMessage, PartnerPayout
+from django.core.exceptions import ValidationError
 
 # Import dei form
 from .forms import (
@@ -118,19 +119,22 @@ def partner_update_item_status(request, item_id):
         new_status = request.POST.get("partner_status")
         valid_statuses = dict(OrderItem.PARTNER_STATUS_CHOICES).keys()
 
+        if item.payout_id is not None or item.is_liquidated:
+            messages.error(
+                request,
+                "Non puoi modificare lo stato: questa riga è già stata liquidata (payout generato)."
+            )
+            return redirect("partners:order_detail", order_id=item.order.id)
+        
         if new_status in valid_statuses and new_status != item.partner_status:
             old_status = item.partner_status
 
             # 🔹 CALCOLO COMMISSIONE
             # Se la riga passa a COMPLETATA, calcoliamo (o ricalcoliamo) la commissione.
             if new_status == OrderItem.PARTNER_STATUS_COMPLETED:
-                # Leggiamo la percentuale dal profilo partner
-                default_rate = getattr(profile, "default_commission_percent", None)
-                if default_rate is None:
-                    default_rate = Decimal("0.00")  # fallback prudente
-
-                # usa il metodo definito su OrderItem
-                item.calculate_commission(default_rate=default_rate)
+                # NON ricalcoliamo se già calcolata: la fissiamo una volta sola
+                if item.commission_amount in (None, Decimal("0.00")):
+                    item.calculate_commission()
 
             # Se la riga viene RIFIUTATA, azzeriamo la commissione
             if new_status == OrderItem.PARTNER_STATUS_REJECTED:

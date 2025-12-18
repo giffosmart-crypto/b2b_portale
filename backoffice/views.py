@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Count, Sum, F, ExpressionWrapper, DecimalField, Value, Q, Subquery, OuterRef, Window
 from django.db.models.functions import Coalesce, TruncMonth, TruncDate, RowNumber
 
@@ -225,11 +225,34 @@ def order_detail(request, order_id):
     )
 
     items = (
-        OrderItem.objects.select_related("product", "partner")
+        OrderItem.objects
+        .select_related("product", "partner")
         .filter(order=order)
     )
 
-    # Aggiornamento stato + note admin
+    # ✅ LOCK: se esiste almeno una riga liquidata o legata a payout PAID
+    has_paid_payout = (
+        items.filter(is_liquidated=True).exists()
+        or items.filter(payout__status=PartnerPayout.STATUS_PAID).exists()
+    )
+
+    # ranking stati
+    status_rank = {code: idx for idx, (code, _) in enumerate(Order.STATUS_CHOICES)}
+
+    # stati disabilitati lato UI
+    disabled_statuses = set()
+    if has_paid_payout:
+        cur = order.status
+
+        if hasattr(Order, "STATUS_CANCELLED"):
+            disabled_statuses.add(Order.STATUS_CANCELLED)
+
+        if cur in status_rank:
+            cur_rank = status_rank[cur]
+            for value, _label in Order.STATUS_CHOICES:
+                if value in status_rank and status_rank[value] < cur_rank:
+                    disabled_statuses.add(value)
+
     if request.method == "POST":
 
         new_status = request.POST.get("status")
@@ -237,22 +260,45 @@ def order_detail(request, order_id):
 
         valid_statuses = {choice[0] for choice in Order.STATUS_CHOICES}
 
+        # le note admin sono sempre aggiornabili
+        order.admin_notes = admin_notes
+
         if new_status in valid_statuses:
+            # 🔒 HARD LOCK: blocca downgrade / cancel dopo payout
+            if has_paid_payout and new_status != order.status:
+
+                if hasattr(Order, "STATUS_CANCELLED") and new_status == Order.STATUS_CANCELLED:
+                    messages.error(
+                        request,
+                        "Operazione non consentita: esiste già un payout pagato per questo ordine."
+                    )
+                    return redirect("backoffice:order_detail", order_id=order.id)
+
+                if (
+                    new_status in status_rank
+                    and order.status in status_rank
+                    and status_rank[new_status] < status_rank[order.status]
+                ):
+                    messages.error(
+                        request,
+                        "Operazione non consentita: non puoi retrocedere lo stato dopo il payout."
+                    )
+                    return redirect("backoffice:order_detail", order_id=order.id)
+
             order.status = new_status
 
-        order.admin_notes = admin_notes
         order.save()
-
-        return HttpResponseRedirect(
-            reverse("backoffice:order_detail", args=[order.id])
-        )
+        messages.success(request, "Ordine aggiornato correttamente.")
+        return redirect("backoffice:order_detail", order_id=order.id)
 
     context = {
         "order": order,
         "items": items,
+        "has_paid_payout": has_paid_payout,
+        "disabled_statuses": disabled_statuses,
     }
-    return render(request, "backoffice/order_detail.html", context)
 
+    return render(request, "backoffice/order_detail.html", context)
 
 # -------------------------------
 # LISTA PARTNER

@@ -3,6 +3,7 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from .utils import get_commission_rate_for_item
+from django.core.exceptions import ValidationError
 
 
 class Order(models.Model):
@@ -15,13 +16,13 @@ class Order(models.Model):
     STATUS_CANCELLED = "cancelled"
 
     STATUS_CHOICES = [
-        (STATUS_DRAFT, "Bozza"),
+#        (STATUS_DRAFT, "Bozza"),
         (STATUS_PENDING_PAYMENT, "In attesa pagamento"),
         (STATUS_PAID, "Pagato"),
-        (STATUS_PROCESSING, "In lavorazione"),
-        (STATUS_SHIPPED, "Spedito"),
-        (STATUS_COMPLETED, "Completato"),
-        (STATUS_CANCELLED, "Annullato"),
+#        (STATUS_PROCESSING, "In lavorazione"),
+#        (STATUS_SHIPPED, "Spedito"),
+#        (STATUS_COMPLETED, "Completato"),
+#        (STATUS_CANCELLED, "Annullato"),
     ]
 
     PAYMENT_PAYPAL = "paypal"
@@ -80,6 +81,54 @@ class Order(models.Model):
     review_invite_sent_at = models.DateTimeField(null=True, blank=True)
     review_reminder_sent_at = models.DateTimeField(null=True, blank=True)
     
+def save(self, *args, **kwargs):
+    """
+    Hard-lock contabile:
+    se esiste almeno una riga liquidata o legata a payout PAID,
+    impedisce downgrade dello stato ordine e annullamento.
+    (Protegge anche Django admin standard e shell.)
+    """
+    previous_status = None
+    if self.pk:
+        previous_status = (
+            Order.objects
+            .filter(pk=self.pk)
+            .values_list("status", flat=True)
+            .first()
+        )
+
+    # Se lo stato non cambia, non bloccare (consenti update di note, fattura, ecc.)
+    if previous_status and self.status != previous_status:
+
+        has_paid_payout = (
+            self.items.filter(is_liquidated=True).exists()
+            or self.items.filter(payout__status="paid").exists()
+        )
+
+        if has_paid_payout:
+            # ranking stati (stessa sequenza di STATUS_CHOICES)
+            status_rank = {code: idx for idx, (code, _lbl) in enumerate(self.STATUS_CHOICES)}
+
+            # 1) vieta annullamento
+            if hasattr(self, "STATUS_CANCELLED") and self.status == self.STATUS_CANCELLED:
+                raise ValidationError(
+                    "Operazione non consentita: esiste già un payout pagato (o righe liquidate) su questo ordine."
+                )
+
+            # 2) vieta downgrade (es. paid -> pending_payment)
+            if (
+                self.status in status_rank
+                and previous_status in status_rank
+                and status_rank[self.status] < status_rank[previous_status]
+            ):
+                raise ValidationError(
+                    "Operazione non consentita: esiste già un payout pagato (o righe liquidate) su questo ordine. "
+                    "Non puoi retrocedere lo stato ordine."
+                )
+
+    super().save(*args, **kwargs)
+
+    
     def recalculate_commissions(self):
         """
         Ricalcola le commissioni per tutte le righe dell'ordine
@@ -101,6 +150,7 @@ class Order(models.Model):
 
     def __str__(self) -> str:
         return f"Ordine #{self.id} - {self.client}"
+        
 
 
 class OrderItem(models.Model):
@@ -216,6 +266,48 @@ class OrderItem(models.Model):
         # quota partner
         partner_net = gross - commission
         self.partner_earnings = partner_net.quantize(Decimal("0.01"))
+        
+def save(self, *args, **kwargs):
+    completed = self.PARTNER_STATUS_COMPLETED
+
+    previous_status = None
+    previous_payout_id = None
+    previous_is_liquidated = None
+
+    if self.pk:
+        prev = (
+            OrderItem.objects
+            .filter(pk=self.pk)
+            .values("partner_status", "payout_id", "is_liquidated")
+            .first()
+        )
+        if prev:
+            previous_status = prev["partner_status"]
+            previous_payout_id = prev["payout_id"]
+            previous_is_liquidated = prev["is_liquidated"]
+
+            # 🔒 BLOCCO HARD: se già liquidata, non permettere cambio partner_status
+            already_paid = bool(previous_payout_id) or bool(previous_is_liquidated)
+            status_changed = previous_status != self.partner_status
+            if already_paid and status_changed:
+                raise ValidationError(
+                    "Impossibile cambiare lo stato: la riga è già stata liquidata tramite payout."
+                )
+
+    # Trigger: al passaggio a COMPLETATO (calcolo una sola volta)
+    if (
+        self.partner_status == completed
+        and previous_status != completed
+        and self.partner is not None
+        and (self.commission_amount is None or self.commission_amount == Decimal("0.00"))
+    ):
+        # usa la logica già esistente e funzionante
+        if self.commission_rate and self.commission_rate > Decimal("0.00"):
+            self.calculate_commission(default_rate=self.commission_rate)
+        else:
+            self.calculate_commission()
+
+    super().save(*args, **kwargs)
 
 
 # ============================================================

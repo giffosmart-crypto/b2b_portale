@@ -135,7 +135,7 @@
   {% endif %}
 </td>
           <td>{{ order.total }}</td>
-          <td>{{ order.status }}</td>
+          <td>{{ order.get_status_display }}</td>
           <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
           <td>
             <a href="{% url 'backoffice:order_detail' order.id %}" class="btn btn-sm btn-primary">
