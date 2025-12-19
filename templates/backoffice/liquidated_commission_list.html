@@ -125,11 +125,14 @@
                 {{ item.partner_earnings|floatformat:2 }} €
               </td>
               <td class="py-2 pr-4 align-top text-right text-xs">
-                {% if item.payout_id %}
-                  <a href="{% url 'admin:orders_partnerpayout_change' item.payout_id %}"
-                     class="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700 js-admin-popup">
-                    Vedi payout
-                  </a>
+                {# Preferiamo il payout collegato alla riga; in fallback usiamo il payout "stimato" dal periodo #}
+                {% if item.payout_id or item.payout_hint_id %}
+                  {% with pid=item.payout_id|default:item.payout_hint_id %}
+                    <a href="{% url 'admin:orders_partnerpayout_change' pid %}"
+                       class="inline-flex items-center px-3 py-1.5 rounded-full text-[11px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700 js-admin-popup">
+                      Vedi payout
+                    </a>
+                  {% endwith %}
                 {% else %}
                   <span class="text-slate-400">—</span>
                 {% endif %}

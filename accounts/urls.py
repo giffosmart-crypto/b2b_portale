@@ -5,6 +5,8 @@ from django.contrib.auth import views as auth_views
 app_name = "accounts"
 
 urlpatterns = [
+    # Dashboard cliente
+    path("my/", views.my_dashboard, name="my_dashboard"),
     # ordini cliente
     path("my/orders/", views.my_orders_list, name="my_orders"),
     path("my/orders/<int:order_id>/", views.my_order_detail, name="my_order_detail"),

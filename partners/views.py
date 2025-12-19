@@ -18,6 +18,7 @@ from decimal import Decimal
 from .models import PartnerProfile, PartnerNotification
 from orders.models import Order, OrderItem, OrderItemStatusLog, OrderMessage, PartnerPayout
 from django.core.exceptions import ValidationError
+from django.db.models import Count, Q, F
 
 # Import dei form
 from .forms import (
@@ -219,11 +220,29 @@ def partner_order_list(request):
     if partner is None:
         return redirect("catalog:product_list")
 
-    # ordini che hanno almeno una riga assegnata al partner
-    orders = (
+    # Ordini "aperti" per questo partner:
+    # - visualizziamo l'ordine in "Ordini da evadere" se esiste ALMENO una riga
+    #   del partner NON in stato COMPLETATO.
+    # - se TUTTE le righe del partner sono COMPLETATE, l'ordine va in Archivio.
+    completed = OrderItem.PARTNER_STATUS_COMPLETED
+
+    base_qs = (
         Order.objects
         .filter(items__partner=partner)
-        .distinct()
+        .annotate(
+            partner_items=Count("items", filter=Q(items__partner=partner), distinct=True),
+            partner_completed_items=Count(
+                "items",
+                filter=Q(items__partner=partner, items__partner_status=completed),
+                distinct=True,
+            ),
+        )
+        .filter(partner_items__gt=0)
+    )
+
+    orders = (
+        base_qs
+        .exclude(partner_items=F("partner_completed_items"))
         .order_by("-created_at")
     )
 
@@ -239,6 +258,53 @@ def partner_order_list(request):
         "orders": orders,
     }
     return render(request, "partners/order_list.html", context)
+
+
+# ============================================================
+#   ARCHIVIO ORDINI PARTNER
+# ============================================================
+
+
+@login_required
+def partner_order_archive(request):
+    partner = _get_partner_profile_or_403(request.user)
+    if partner is None:
+        return redirect("catalog:product_list")
+
+    completed = OrderItem.PARTNER_STATUS_COMPLETED
+
+    base_qs = (
+        Order.objects
+        .filter(items__partner=partner)
+        .annotate(
+            partner_items=Count("items", filter=Q(items__partner=partner), distinct=True),
+            partner_completed_items=Count(
+                "items",
+                filter=Q(items__partner=partner, items__partner_status=completed),
+                distinct=True,
+            ),
+        )
+        .filter(partner_items__gt=0)
+    )
+
+    orders = (
+        base_qs
+        .filter(partner_items=F("partner_completed_items"))
+        .order_by("-created_at")
+    )
+
+    # calcolo badge nuovi messaggi per ogni ordine
+    for o in orders:
+        o.unread_messages = OrderMessage.objects.filter(
+            order=o,
+            is_read_by_partner=False,
+        ).exists()
+
+    context = {
+        "partner": partner,
+        "orders": orders,
+    }
+    return render(request, "partners/order_archive.html", context)
 
 
 # ============================================================
@@ -569,7 +635,7 @@ def partner_commissions(request):
         .filter(
             partner=profile,
             partner_status=OrderItem.PARTNER_STATUS_COMPLETED,
-            order__status=Order.STATUS_COMPLETED,
+            order__status=Order.STATUS_PAID,
         )
         .select_related("order", "product")
         .order_by("-order__created_at")

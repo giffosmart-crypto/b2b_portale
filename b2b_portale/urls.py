@@ -5,10 +5,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import render
 
+# Home pubblica + redirect post-login
+from cms.views import HomeView
 
-# --- HOME VIEW ---
-def home(request):
-    return render(request, "home.html")
+
+# NOTA:
+# La home pubblica è gestita da cms.views.HomeView, che effettua anche il
+# redirect automatico degli utenti autenticati verso la loro area riservata.
 
 
 # --- CONTACT VIEW ---
@@ -19,7 +22,7 @@ def contact(request):
 urlpatterns = [
 
     # 🏠 HOME PAGE
-    path("", home, name="home"),
+    path("", HomeView.as_view(), name="home"),
 
     # 📩 CONTATTI
     path("contatti/", contact, name="contact"),

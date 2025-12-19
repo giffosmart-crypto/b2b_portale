@@ -12,6 +12,7 @@ urlpatterns = [
 
     # Ordini partner
     path("orders/", views.partner_order_list, name="order_list"),
+    path("orders/archive/", views.partner_order_archive, name="order_archive"),
     path("orders/<int:order_id>/", views.partner_order_detail, name="order_detail"),
 
     # Export ordini partner

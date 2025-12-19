@@ -17,7 +17,7 @@ class Order(models.Model):
 
     STATUS_CHOICES = [
 #        (STATUS_DRAFT, "Bozza"),
-        (STATUS_PENDING_PAYMENT, "In attesa pagamento"),
+        (STATUS_PENDING_PAYMENT, "In attesa conferma pagamento"),
         (STATUS_PAID, "Pagato"),
 #        (STATUS_PROCESSING, "In lavorazione"),
 #        (STATUS_SHIPPED, "Spedito"),

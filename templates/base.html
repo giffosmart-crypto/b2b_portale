@@ -319,6 +319,10 @@
                             <span class="badge-pill">{{ partner_open_items_count }}</span>
                         {% endif %}
                     </a>
+                    <a href="{% url 'partners:order_archive' %}"
+                       class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
+                        <span>🗂 Archivio ordini</span>
+                    </a>
                     <a href="{% url 'partners:product_list' %}"
                        class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
                         <span>📚 Catalogo prodotti / servizi</span>
@@ -471,6 +475,10 @@
                     {% if partner_open_items_count %}
                         <span class="badge-pill">{{ partner_open_items_count }}</span>
                     {% endif %}
+                </a>
+                <a href="{% url 'partners:order_archive' %}"
+                   class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
+                    <span>🗂 Archivio ordini</span>
                 </a>
                 <a href="{% url 'partners:product_list' %}"
                    class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">

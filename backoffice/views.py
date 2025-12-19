@@ -2362,7 +2362,7 @@ def liquidated_commission_list(request):
 
     qs = (
         OrderItem.objects
-        .select_related("order", "product", "partner", "partner__user")
+        .select_related("order", "product", "partner", "partner__user", "payout")
         .filter(
             commission_amount__gt=0,
             is_liquidated=True,
@@ -2386,7 +2386,9 @@ def liquidated_commission_list(request):
         period_end__gte=OuterRef("order__created_at"),
     ).order_by("-period_end").values("id")[:1]
 
-    qs = qs.annotate(payout_id=Subquery(payout_subquery))
+    # NB: su OrderItem esiste già il campo payout_id (FK), quindi non possiamo
+    # creare un'annotazione con lo stesso nome.
+    qs = qs.annotate(payout_hint_id=Subquery(payout_subquery))
 
     qs = qs.order_by("partner__company_name", "-order__created_at")
 

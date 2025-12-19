@@ -52,6 +52,8 @@
             <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium
                 {% if order.status == 'pending_payment' %}
                     bg-yellow-100 text-yellow-800
+                {% elif order.status == 'paid' %}
+                    bg-emerald-100 text-emerald-800
                 {% elif order.status == 'processing' %}
                     bg-blue-100 text-blue-800
                 {% elif order.status == 'completed' %}
