@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+from django.conf import settings
 from django.views.decorators.http import require_POST
 
 from catalog.models import Product
@@ -28,6 +30,16 @@ def cart_add(request, product_id):
     # per semplicità: aggiunge sempre +1
     cart.add(product=product, quantity=1)
     messages.success(request, f"{product.name} è stato aggiunto al carrello.")
+
+    # Se presente, torniamo alla pagina precedente (es. catalogo) invece di forzare la pagina carrello.
+    next_url = request.GET.get("next") or request.META.get("HTTP_REFERER")
+    if next_url and url_has_allowed_host_and_scheme(
+        url=next_url,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        return redirect(next_url)
+
     return redirect("orders:cart_detail")
 
 

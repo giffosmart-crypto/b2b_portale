@@ -352,10 +352,51 @@
                         <span>👤 Profilo amministratore</span>
                     </a>
 
-                    <a href="/admin-panel/"
-                       class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
-                        <span>🛠 Area amministratore</span>
-                    </a>
+                    <details class="group rounded-xl">
+                      <summary class="list-none cursor-pointer flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
+                        <span>🛠 Admin Panel</span>
+                        <span class="text-slate-400 group-open:rotate-180 transition">▾</span>
+                      </summary>
+
+                      <div class="ml-3 mt-2 space-y-1">
+                        <a href="{% url 'backoffice:dashboard' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Dashboard
+                        </a>
+                        <a href="{% url 'backoffice:order_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Ordini
+                        </a>
+                        <a href="{% url 'backoffice:partner_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Partner
+                        </a>
+                        <a href="{% url 'backoffice:client_structure_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Strutture cliente
+                        </a>
+                        <a href="{% url 'backoffice:category_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Categorie prodotto
+                        </a>
+                        <a href="{% url 'backoffice:product_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Prodotti / Servizi
+                        </a>
+                        <a href="{% url 'backoffice:kit_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Kit / Componenti
+                        </a>
+                        <a href="{% url 'backoffice:cms_page_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Pagine CMS
+                        </a>
+                        <a href="{% url 'backoffice:review_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Recensioni prodotti
+                        </a>
+                        <a href="{% url 'backoffice:user_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Utenti
+                        </a>
+                        <a href="{% url 'backoffice:partner_commission_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Commissioni partner
+                        </a>
+                        <a href="{% url 'backoffice:commission_report' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">
+                          Report & Grafici
+                        </a>
+                      </div>
+                    </details>
                 {% endif %}
             {% endif %}
 
@@ -363,10 +404,30 @@
                 Sistema
             </p>
 
+            {% if request.user.is_authenticated %}
+            {% if request.user.is_staff or request.user.role == "admin" %}
+            {% if request.user.is_authenticated %}
+            {% if request.user.is_staff or request.user.role == "admin" %}
+            {% if request.user.is_authenticated %}
+            {% if request.user.is_staff or request.user.role == "admin" %}
+            {% if request.user.is_authenticated %}
+            {% if request.user.is_staff or request.user.role == "admin" %}
+            {% if request.user.is_authenticated %}
+            {% if request.user.is_staff or request.user.role == "admin" %}
             <a href="/admin/"
                class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
                 <span>⚙️ Admin</span>
             </a>
+            {% endif %}
+            {% endif %}
+            {% endif %}
+            {% endif %}
+            {% endif %}
+            {% endif %}
+            {% endif %}
+            {% endif %}
+            {% endif %}
+            {% endif %}
 
             <a href="{% url 'contact' %}"
                class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
@@ -509,10 +570,14 @@
                 Sistema
             </p>
 
+            {% if request.user.is_authenticated %}
+            {% if request.user.is_staff or request.user.role == "admin" %}
             <a href="/admin/"
                class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
                 <span>⚙️ Admin</span>
             </a>
+            {% endif %}
+            {% endif %}
 
             {% if request.user.is_authenticated and request.user.role == "admin" %}
                 <a href="{% url 'accounts:my_profile' %}"
@@ -520,10 +585,29 @@
                     <span>👤 Profilo amministratore</span>
                 </a>
 
-                <a href="/admin-panel/"
-                   class="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
-                    <span>🛠 Area amministratore</span>
-                </a>
+                <details class="group rounded-xl" open>
+                  <summary class="list-none cursor-pointer flex items-center justify-between px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700">
+                    <span>🛠 Admin Panel</span>
+                    <span class="text-slate-400 group-open:rotate-180 transition">▾</span>
+                  </summary>
+
+                  <div class="ml-3 mt-2 space-y-1">
+                    <a href="{% url 'backoffice:dashboard' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Dashboard</a>
+                    <a href="{% url 'backoffice:order_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Ordini</a>
+                    <a href="{% url 'backoffice:partner_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Partner</a>
+                    <a href="{% url 'backoffice:client_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Clienti</a>
+                    <a href="{% url 'backoffice:client_structure_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Strutture cliente</a>
+                    <a href="{% url 'backoffice:category_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Categorie prodotto</a>
+                    <a href="{% url 'backoffice:product_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Prodotti / Servizi</a>
+                    <a href="{% url 'backoffice:kit_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Kit / Componenti</a>
+                    <a href="{% url 'backoffice:cms_page_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Pagine CMS</a>
+                    <a href="{% url 'backoffice:review_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Recensioni prodotti</a>
+                    <a href="{% url 'backoffice:user_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Utenti</a>
+                    <a href="{% url 'backoffice:partner_commission_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Commissioni partner</a>
+                    <a href="{% url 'backoffice:partner_payout_list' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Payout partner</a>
+                    <a href="{% url 'backoffice:commission_report' %}" class="block px-3 py-2 rounded-xl hover:bg-slate-100 text-slate-700 text-sm">Report &amp; Grafici</a>
+                  </div>
+                </details>
             {% endif %}
 
             <a href="{% url 'contact' %}"
@@ -572,9 +656,10 @@
 
             <div class="flex items-center gap-2 md:gap-3">
 
-                {% if request.user.is_authenticated and request.user.role != "partner" %}
+
+                {% if request.user.is_authenticated and request.user.role == "admin" %}
                     {% if not request.resolver_match or request.resolver_match.namespace != "backoffice" %}
-                        <!-- Search desktop SOLO per non-partner e NON nel backoffice -->
+                        <!-- Search desktop (solo admin, fuori dal backoffice) -->
                         <form action="{% url 'catalog:product_list' %}" method="get" class="hidden md:block">
                             <div class="relative">
                                 <input type="text" name="q"
@@ -584,17 +669,17 @@
                             </div>
                         </form>
 
-                        <!-- Carrello in topbar SOLO per non-partner e NON nel backoffice -->
+                        <!-- Carrello (solo admin, fuori dal backoffice) -->
                         <a href="{% url 'orders:cart_detail' %}"
-   class="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900">
-    <span>🧺</span>
-    <span class="hidden sm:inline">Carrello</span>
-    {% if cart_item_count %}
-        <span class="hidden md:inline text-xs text-slate-500">
-            ({{ cart_item_count }} – € {{ cart_total }})
-        </span>
-    {% endif %}
-</a>
+                           class="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900">
+                            <span>🧺</span>
+                            <span class="hidden sm:inline">Carrello</span>
+                            {% if cart_item_count %}
+                                <span class="hidden md:inline text-xs text-slate-500">
+                                    ({{ cart_item_count }} – € {{ cart_total }})
+                                </span>
+                            {% endif %}
+                        </a>
                     {% endif %}
                 {% endif %}
 

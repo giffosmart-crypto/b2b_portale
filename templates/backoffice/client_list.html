@@ -4,21 +4,62 @@
 
 {% block admin_content %}
 
-<h1 class="mb-4">Clienti</h1>
+<h1 class="text-xl md:text-2xl font-semibold text-slate-900 mb-2">
+  Clienti
+</h1>
+<p class="text-sm text-slate-500 mb-6">
+  Elenco degli utenti cliente registrati sul portale.
+</p>
+
+<!-- FILTRI -->
+<div class="card mb-6">
+  <div class="card-body">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Email</label>
+        <input type="text" name="email" value="{{ email }}"
+               class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Nome / Cognome</label>
+        <input type="text" name="name" value="{{ name }}"
+               class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </div>
+
+      <div class="flex items-end gap-3">
+        <div class="flex-1">
+          <label class="block text-xs font-semibold text-slate-500 mb-1">Stato</label>
+          <select name="status"
+                  class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="" {% if not status %}selected{% endif %}>Tutti</option>
+            <option value="active" {% if status == 'active' %}selected{% endif %}>Attivo</option>
+            <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Disattivato</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary text-sm" type="submit">Filtra</button>
+        <a href="{% url 'backoffice:client_list' %}" class="btn btn-secondary text-sm">Reset</a>
+      </div>
+
+    </form>
+  </div>
+</div>
 
 <div class="card">
-  <div class="card-header bg-secondary text-white">
+  <div class="card-header bg-indigo-600 text-white">
     <strong>Elenco clienti</strong>
   </div>
   <div class="card-body p-0">
     <table class="table table-striped table-hover table-sm mb-0">
-      <thead class="table-light">
+      <thead>
         <tr>
           <th>Email</th>
           <th>Nome</th>
           <th>Cognome</th>
           <th>Registrato il</th>
-          <th></th>
+          <th class="text-right">Azioni</th>
         </tr>
       </thead>
       <tbody>
@@ -28,7 +69,7 @@
           <td>{{ c.first_name }}</td>
           <td>{{ c.last_name }}</td>
           <td>{{ c.date_joined|date:"d/m/Y" }}</td>
-          <td class="text-end">
+          <td class="text-right">
             <a href="{% url 'backoffice:order_list' %}?client={{ c.email }}" class="btn btn-sm btn-primary">
               Ordini
             </a>

@@ -182,7 +182,16 @@
             >
               Dettagli
             </a>
-            <!-- qui in futuro puoi aggiungere “Aggiungi al carrello”, ecc. -->
+
+            {% if request.user.is_authenticated and request.user.role == 'client' %}
+              <a
+                href="{% url 'orders:cart_add' product.id %}?next={{ request.get_full_path|urlencode }}"
+                class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 hover:bg-slate-50"
+                title="Aggiungi al carrello"
+              >
+                + Carrello
+              </a>
+            {% endif %}
           </div>
         </div>
       {% endfor %}

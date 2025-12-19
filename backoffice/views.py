@@ -313,14 +313,33 @@ def order_detail(request, order_id):
 @admin_required
 def partner_list(request):
 
-    partners = (
+    qs = (
         PartnerProfile.objects.select_related("user")
         .all()
         .order_by("company_name")
     )
 
+    # Filtri
+    company = (request.GET.get("company") or "").strip()
+    email = (request.GET.get("email") or "").strip()
+    status = (request.GET.get("status") or "").strip()  # active|inactive|''
+
+    if company:
+        qs = qs.filter(company_name__icontains=company)
+
+    if email:
+        qs = qs.filter(user__email__icontains=email)
+
+    if status == "active":
+        qs = qs.filter(is_active=True)
+    elif status == "inactive":
+        qs = qs.filter(is_active=False)
+
     context = {
-        "partners": partners,
+        "partners": qs,
+        "company": company,
+        "email": email,
+        "status": status,
     }
     return render(request, "backoffice/partner_list.html", context)
 
@@ -331,10 +350,32 @@ def partner_list(request):
 @admin_required
 def client_list(request):
 
-    clients = User.objects.filter(role="client").order_by("email")
+    qs = User.objects.filter(role="client").order_by("email")
+
+    # Filtri
+    email = (request.GET.get("email") or "").strip()
+    name = (request.GET.get("name") or "").strip()
+    status = (request.GET.get("status") or "").strip()  # active|inactive|''
+
+    if email:
+        qs = qs.filter(email__icontains=email)
+
+    if name:
+        qs = qs.filter(
+            Q(first_name__icontains=name)
+            | Q(last_name__icontains=name)
+        )
+
+    if status == "active":
+        qs = qs.filter(is_active=True)
+    elif status == "inactive":
+        qs = qs.filter(is_active=False)
 
     context = {
-        "clients": clients,
+        "clients": qs,
+        "email": email,
+        "name": name,
+        "status": status,
     }
     return render(request, "backoffice/client_list.html", context)
 
@@ -345,14 +386,43 @@ def client_list(request):
 @admin_required
 def product_list(request):
 
-    products = (
+    qs = (
         Product.objects.select_related("category", "supplier")
         .all()
         .order_by("name")
     )
 
+    # Filtri
+    q = (request.GET.get("q") or "").strip()
+    category_id = (request.GET.get("category") or "").strip()
+    supplier_id = (request.GET.get("supplier") or "").strip()
+    status = (request.GET.get("status") or "").strip()  # active|inactive|''
+
+    if q:
+        qs = qs.filter(name__icontains=q)
+
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+
+    if supplier_id:
+        qs = qs.filter(supplier_id=supplier_id)
+
+    if status == "active":
+        qs = qs.filter(is_active=True)
+    elif status == "inactive":
+        qs = qs.filter(is_active=False)
+
+    categories = Category.objects.all().order_by("name")
+    suppliers = PartnerProfile.objects.all().order_by("company_name")
+
     context = {
-        "products": products,
+        "products": qs,
+        "categories": categories,
+        "suppliers": suppliers,
+        "q": q,
+        "category_id": int(category_id) if category_id.isdigit() else None,
+        "supplier_id": int(supplier_id) if supplier_id.isdigit() else None,
+        "status": status,
     }
     return render(request, "backoffice/product_list.html", context)
     

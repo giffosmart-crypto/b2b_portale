@@ -17,8 +17,8 @@ class HomeView(TemplateView):
                 return redirect("partners:dashboard")
             if role == User.ROLE_ADMIN:
                 return redirect("backoffice:dashboard")
-            # default: client / altro
-            return redirect("accounts:my_dashboard")
+            # default: client / altro -> prima pagina = catalogo
+            return redirect("catalog:product_list")
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
