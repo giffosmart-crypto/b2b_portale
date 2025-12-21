@@ -103,7 +103,8 @@
       Risultati: {{ products.paginator.count }} prodotto{% if products.paginator.count != 1 %}i{% endif %}
     </p>
 
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    {# Grid responsive: breakpoints più "aggressivi" per evitare 1 colonna su viewport stretti/zoom #}
+    <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {% for product in products %}
         <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
           <!-- Immagine (se presente) -->
@@ -163,16 +164,25 @@
 
             <!-- Prezzo -->
             <div class="mt-auto">
-              <p class="text-sm font-semibold text-slate-900">
-                {{ product.base_price }} €
-                {% if product.unit %}
-                  <span class="text-[11px] font-normal text-slate-500">
-                    / {{ product.get_unit_display|default:product.unit }}
-                  </span>
-                {% endif %}
-              </p>
+              {% if request.user.is_authenticated %}
+                <p class="text-sm font-semibold text-slate-900">
+                  {{ product.base_price|floatformat:2 }} €
+                  {% if product.unit %}
+                    <span class="text-[11px] font-normal text-slate-500">
+                      / {{ product.get_unit_display|default:product.unit }}
+                    </span>
+                  {% endif %}
+                </p>
+              {% else %}
+                <p class="text-xs text-slate-500">
+                  <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}"
+                     class="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                    Accedi
+                  </a>
+                  per vedere il prezzo
+                </p>
+              {% endif %}
             </div>
-          </div>
 
           <!-- Footer card: CTA -->
           <div class="px-3 pb-3 pt-2 border-t border-slate-100 flex items-center justify-between">

@@ -71,12 +71,23 @@
             <!-- Prezzo -->
             <div class="space-y-1">
                 <p class="text-xs text-slate-500 uppercase">Prezzo</p>
-                <p class="text-2xl font-semibold text-slate-900">
-                    € {{ product.base_price }}
-                </p>
-                <p class="text-xs text-slate-500">
-                    {{ product.get_unit_display }}
-                </p>
+
+                {% if request.user.is_authenticated %}
+                  <p class="text-2xl font-semibold text-slate-900">
+                      € {{ product.base_price|floatformat:2 }}
+                  </p>
+                  <p class="text-xs text-slate-500">
+                      {{ product.get_unit_display }}
+                  </p>
+                {% else %}
+                  <p class="text-sm text-slate-600">
+                    <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}"
+                       class="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                      Accedi
+                    </a>
+                    per vedere il prezzo
+                  </p>
+                {% endif %}
             </div>
 
             <!-- Descrizione breve / lunga -->
@@ -89,10 +100,17 @@
             <!-- CTA -->
             <div class="flex flex-wrap items-center gap-3 pt-2">
 
-                <a href="{% url 'orders:cart_add' product.id %}"
+                {% if request.user.is_authenticated and request.user.role == 'client' %}
+                <a href="{% url 'orders:cart_add' product.id %}?next={{ request.get_full_path|urlencode }}"
                    class="inline-flex items-center rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
                     Aggiungi al carrello
                 </a>
+              {% else %}
+                <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}"
+                   class="inline-flex items-center rounded-xl bg-blue-600 text-white px-4 py-2 text-sm font-medium hover:bg-blue-700">
+                    Accedi per acquistare
+                </a>
+              {% endif %}
 
                 <a href="{% url 'catalog:product_availability' product.slug %}"
                    class="text-sm text-blue-600 hover:text-blue-800">
