@@ -228,7 +228,7 @@
         {% endif %}
     {% else %}
         <p class="text-sm text-slate-600 mb-4">
-            <a href="{% url 'login' %}" class="text-blue-600 underline">
+            <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="text-blue-600 underline">
                 Accedi
             </a> per lasciare una recensione.
         </p>

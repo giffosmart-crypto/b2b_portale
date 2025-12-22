@@ -1,5 +1,17 @@
 {% extends "base.html" %}
 
+{% block extra_head %}
+  {{ block.super }}
+  <style>
+    /* Catalog cards layout (robusto: non dipende da Tailwind responsive utilities) */
+    .catalog-cards { display: flex; flex-wrap: wrap; margin: -8px; }
+    .catalog-card { padding: 8px; flex: 0 0 100%; max-width: 100%; }
+    @media (min-width: 640px) { .catalog-card { flex-basis: 50%; max-width: 50%; } }
+    @media (min-width: 1024px) { .catalog-card { flex-basis: 33.3333%; max-width: 33.3333%; } }
+    @media (min-width: 1280px) { .catalog-card { flex-basis: 25%; max-width: 25%; } }
+  </style>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
@@ -103,105 +115,108 @@
       Risultati: {{ products.paginator.count }} prodotto{% if products.paginator.count != 1 %}i{% endif %}
     </p>
 
-    {# Grid responsive: breakpoints più "aggressivi" per evitare 1 colonna su viewport stretti/zoom #}
-    <div class="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    {# Layout cards: gestito da CSS (catalog-cards/catalog-card) #}
+    <div class="catalog-cards">
       {% for product in products %}
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-          <!-- Immagine (se presente) -->
-          {% if product.main_image %}
-            <div class="aspect-[4/3] bg-slate-100 overflow-hidden">
-              <img
-                src="{{ product.main_image.url }}"
-                alt="{{ product.name }}"
-                class="w-full h-full object-cover"
-              />
-            </div>
-          {% else %}
-            <div class="aspect-[4/3] bg-slate-100 flex items-center justify-center text-[11px] text-slate-400">
-              Nessuna immagine
-            </div>
-          {% endif %}
-
-          <!-- Contenuto card -->
-          <div class="p-3 flex-1 flex flex-col">
-            <!-- Categoria e partner -->
-            <div class="flex items-center justify-between mb-1">
-              <p class="text-[11px] font-medium text-slate-500">
-                {% if product.category %}{{ product.category.name }}{% else %}Senza categoria{% endif %}
-              </p>
-              {% if product.supplier %}
-                <p class="text-[11px] text-slate-400">
-                  {{ product.supplier.company_name }}
-                </p>
-              {% endif %}
-            </div>
-
-            <!-- Nome prodotto -->
-            <h3 class="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">
-              <a href="{% url 'catalog:product_detail' product.slug %}" class="hover:text-blue-600">
-                {{ product.name }}
-              </a>
-            </h3>
-
-            <!-- Rating medio -->
-            <p class="text-xs text-amber-600 font-medium mb-1">
-              ⭐ {{ product.average_rating|floatformat:1 }} / 5
-              <span class="text-[11px] text-slate-400">
-                ({{ product.ratings.count }} recensioni)
-              </span>
-            </p>
-
-            <!-- Descrizione breve -->
-            {% if product.short_description %}
-              <p class="text-xs text-slate-600 mb-2 line-clamp-3">
-                {{ product.short_description }}
-              </p>
-            {% elif product.description %}
-              <p class="text-xs text-slate-600 mb-2 line-clamp-3">
-                {{ product.description|truncatechars:160 }}
-              </p>
+        <div class="catalog-card">
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-full">
+            <!-- Immagine (se presente) -->
+            {% if product.main_image %}
+              <div class="aspect-[4/3] bg-slate-100 overflow-hidden">
+                <img
+                  src="{{ product.main_image.url }}"
+                  alt="{{ product.name }}"
+                  class="w-full h-full object-cover"
+                />
+              </div>
+            {% else %}
+              <div class="aspect-[4/3] bg-slate-100 flex items-center justify-center text-[11px] text-slate-400">
+                Nessuna immagine
+              </div>
             {% endif %}
 
-            <!-- Prezzo -->
-            <div class="mt-auto">
-              {% if request.user.is_authenticated %}
-                <p class="text-sm font-semibold text-slate-900">
-                  {{ product.base_price|floatformat:2 }} €
-                  {% if product.unit %}
-                    <span class="text-[11px] font-normal text-slate-500">
-                      / {{ product.get_unit_display|default:product.unit }}
-                    </span>
-                  {% endif %}
+            <!-- Contenuto card -->
+            <div class="p-3 flex-1 flex flex-col">
+              <!-- Categoria e partner -->
+              <div class="flex items-center justify-between mb-1">
+                <p class="text-[11px] font-medium text-slate-500">
+                  {% if product.category %}{{ product.category.name }}{% else %}Senza categoria{% endif %}
                 </p>
-              {% else %}
-                <p class="text-xs text-slate-500">
-                  <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}"
-                     class="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
-                    Accedi
-                  </a>
-                  per vedere il prezzo
+                {% if product.supplier %}
+                  <p class="text-[11px] text-slate-400">
+                    {{ product.supplier.company_name }}
+                  </p>
+                {% endif %}
+              </div>
+
+              <!-- Nome prodotto -->
+              <h3 class="text-sm font-semibold text-slate-900 mb-1 line-clamp-2">
+                <a href="{% url 'catalog:product_detail' product.slug %}" class="hover:text-blue-600">
+                  {{ product.name }}
+                </a>
+              </h3>
+
+              <!-- Rating medio -->
+              <p class="text-xs text-amber-600 font-medium mb-1">
+                ⭐ {{ product.average_rating|floatformat:1 }} / 5
+                <span class="text-[11px] text-slate-400">
+                  ({{ product.ratings.count }} recensioni)
+                </span>
+              </p>
+
+              <!-- Descrizione breve -->
+              {% if product.short_description %}
+                <p class="text-xs text-slate-600 mb-2 line-clamp-3">
+                  {{ product.short_description }}
+                </p>
+              {% elif product.description %}
+                <p class="text-xs text-slate-600 mb-2 line-clamp-3">
+                  {{ product.description|truncatechars:160 }}
                 </p>
               {% endif %}
+
+              <!-- Prezzo -->
+              <div class="mt-auto">
+                {% if request.user.is_authenticated %}
+                  <p class="text-sm font-semibold text-slate-900">
+                    {{ product.base_price|floatformat:2 }} €
+                    {% if product.unit %}
+                      <span class="text-[11px] font-normal text-slate-500">
+                        / {{ product.get_unit_display|default:product.unit }}
+                      </span>
+                    {% endif %}
+                  </p>
+                {% else %}
+                  <p class="text-xs text-slate-500">
+                    <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}"
+                       class="font-semibold text-blue-600 hover:text-blue-700 hover:underline">
+                      Accedi
+                    </a>
+                    per vedere il prezzo
+                  </p>
+                {% endif %}
+              </div>
             </div>
 
-          <!-- Footer card: CTA -->
-          <div class="px-3 pb-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <a
-              href="{% url 'catalog:product_detail' product.slug %}"
-              class="inline-flex items-center rounded-xl bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-blue-700"
-            >
-              Dettagli
-            </a>
-
-            {% if request.user.is_authenticated and request.user.role == 'client' %}
+            <!-- Footer card: CTA -->
+            <div class="px-3 pb-3 pt-2 border-t border-slate-100 flex items-center justify-between">
               <a
-                href="{% url 'orders:cart_add' product.id %}?next={{ request.get_full_path|urlencode }}"
-                class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 hover:bg-slate-50"
-                title="Aggiungi al carrello"
+                href="{% url 'catalog:product_detail' product.slug %}"
+                class="inline-flex items-center rounded-xl bg-blue-600 px-3 py-2 text-[11px] font-semibold text-white hover:bg-blue-700"
               >
-                + Carrello
+                Dettagli
               </a>
-            {% endif %}
+
+              {% if request.user.is_authenticated and request.user.role == 'client' %}
+                <a
+                  href="{% url 'orders:cart_add' product.id %}?next={{ request.get_full_path|urlencode }}"
+                  class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 hover:bg-slate-50"
+                  title="Aggiungi al carrello"
+                >
+                  + Carrello
+                </a>
+              {% endif %}
+            </div>
           </div>
         </div>
       {% endfor %}
